@@ -8,13 +8,13 @@ from scipy import ndimage
 def unit_vector_norm(X):
     return (X.T / np.sqrt((X**2).sum(axis=1))).T
 
-def split_Raman_af(X, wavelength):
+def split_Raman_af(X, wavelength, polynomial=5):
     """
     Removing spikes from the data to extract the autofluorescence.
     This is done by applying smoothing filter to the data and then taking the min of the smoothing filter and original data.
     """
     a = X
-    c = 50
+    c = 10
 
     # remove the top of the spikes from data, by using a Gaussian smoothing filter
     for _ in range(5):      
@@ -27,7 +27,7 @@ def split_Raman_af(X, wavelength):
     for _ in range(5):
         a[:,c] = X[:,c]
         a[:,-c] = X[:,-c]        
-        z = poly.polyfit(wavelength[::5], a[:,::5].T, 5)
+        z = poly.polyfit(wavelength, a.T, polynomial)
         a1 = poly.polyval(wavelength, z)
         a = np.min([a, a1], axis=0)
         

@@ -29,7 +29,8 @@ class TensorDataset(Dataset):
     TensorDataset with support of transforms.
     """
     def __init__(self, data, transform=None, sample_size=5):
-        self.data = data
+        data, self.labels = zip(*data)
+        self.data = torch.Tensor(np.array(data))
         self.n = sample_size
         self.transform = transform
         self.patches_per_width = self.data.size(2)-self.n
@@ -45,7 +46,7 @@ class TensorDataset(Dataset):
         if self.transform:
             x = self.transform(x)
 
-        return x,
+        return x, self.labels[index_image]
 
     def __len__(self):
         return self.data.size(0)*self.patches_per_images
@@ -68,8 +69,8 @@ def load_liver(data, batch_size, sample_size=5):
         Random_Rotate_90(),
     ])
 
-    tensor_data = torch.Tensor(data)
-    dataset = TensorDataset(tensor_data, transform, sample_size)
+    # tensor_data = torch.Tensor(data)
+    dataset = TensorDataset(data, transform, sample_size)
 
     # test data and train data are split on image level
     # Thus a whole images is either test data or train data
