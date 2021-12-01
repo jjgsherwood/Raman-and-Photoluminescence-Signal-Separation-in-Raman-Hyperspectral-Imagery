@@ -30,6 +30,7 @@ class TensorDataset(Dataset):
     """
     def __init__(self, data, transform=None, sample_size=5):
         data, self.labels = zip(*data)
+        self.labels = torch.Tensor(np.array(self.labels))
         self.data = torch.Tensor(np.array(data))
         self.n = sample_size
         self.transform = transform

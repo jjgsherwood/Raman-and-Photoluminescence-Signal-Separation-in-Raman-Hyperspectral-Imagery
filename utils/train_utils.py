@@ -10,9 +10,11 @@ import numpy as np
 def train(model, optimizer, loader, loss_func, log_step=None, device=torch.device('cuda')):
     model.train()
 
-    for batch_idx, (x, *_) in enumerate(loader):
-        x = x.to(device)
-        loss = loss_func(x, model)
+    for batch_idx, (x, y) in enumerate(loader):
+        x = x.to(device)      
+        y_ = model(x)
+        print(y_, y)
+        loss = loss_func(y[:,:-1], y_)
 
         optimizer.zero_grad()
         model.zero_grad()
@@ -32,8 +34,9 @@ def test(model, loader, loss_func, device=torch.device('cuda')):
     bits = 0
 
     with torch.no_grad():
-        for x, *_ in loader:
+        for x, y in loader:
             x = x.to(device)
-            bits += loss_func(x, model).item()
+            y_ = model(x)
+            bits += loss_func(y[:,:-1], y_).item()
 
     return bits / len(loader)
