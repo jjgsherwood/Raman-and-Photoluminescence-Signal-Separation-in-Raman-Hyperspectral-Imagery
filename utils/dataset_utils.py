@@ -17,6 +17,16 @@ class Vector_unit_normalization():
     def __repr__(self):
         return "Vector unit normalization"
 
+class RandomFlip():
+    def __init__(self):
+        self.rng = np.random.default_rng()
+        
+    def __call__(self, x):
+        return torch.flip(x, tuple(self.rng.choice([-3,-2], size=self.rng.integers(3), replace=False)))
+
+    def __repr__(self):
+        return "Random horizontal flip and/or vertical flip"
+        
 class Random_Rotate_90():
     def __call__(self, x):
         return torch.rot90(x, random.randint(0,3), [-3, -2])
@@ -65,8 +75,7 @@ def split_data(dataset, test_size=TEST_RATIO, seed=42):
 def load_liver(data, batch_size, sample_size=5):
     transform = transforms.Compose([
         Vector_unit_normalization(),
-        transforms.RandomHorizontalFlip(0.5),
-        transforms.RandomVerticalFlip(0.5),
+        RandomFlip(),
         Random_Rotate_90(),
     ])
 

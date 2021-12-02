@@ -13,8 +13,8 @@ def train(model, optimizer, loader, loss_func, log_step=None, device=torch.devic
     for batch_idx, (x, y) in enumerate(loader):
         x = x.to(device)      
         y_ = model(x)
-        print(y_, y)
-        loss = loss_func(y[:,:-1], y_)
+
+        loss = loss_func(y[:,:-1].to(device), y_)
 
         optimizer.zero_grad()
         model.zero_grad()
@@ -26,17 +26,17 @@ def train(model, optimizer, loader, loss_func, log_step=None, device=torch.devic
             if batch_idx % log_step == 0:
                 print('  {}| {:5d}/{:5d}| bits: {:2.2f}'.format(
                     datetime.now().strftime('%Y-%m-%d %H:%M:%S'), batch_idx,
-                    len(loader), loss.item()
+                    len(loader), np.mean((y[:,0].to(device) == torch.round(torch.sigmoid(y_[:,0]))).cpu().detach().numpy())
                 ), flush=True)
 
 def test(model, loader, loss_func, device=torch.device('cuda')):
     model.eval()
-    bits = 0
+    acc = []
 
     with torch.no_grad():
         for x, y in loader:
             x = x.to(device)
             y_ = model(x)
-            bits += loss_func(y[:,:-1], y_).item()
-
-    return bits / len(loader)
+            acc.append(np.mean((y[:,0].to(device) == torch.round(torch.sigmoid(y_[:,0]))).cpu().detach().numpy()))
+            
+    return np.mean(acc)
