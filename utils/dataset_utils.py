@@ -100,3 +100,46 @@ def load_liver_all(data):
 
     data = create_dataset_1x1(data)
     return torch.Tensor(data)
+
+def load_splitdata(data, batch_size):
+    # tensor_data = torch.Tensor(data)
+    dataset = SplitDataset(data)
+
+    # test data and train data are split on image level
+    # Thus a whole images is either test data or train data
+    train_dataset, test_dataset = split_data(dataset)
+
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
+                              drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False,
+                             drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
+
+    return train_loader, test_loader
+
+class SplitDataset(Dataset):
+    """
+    TensorDataset with support of transforms.
+    """
+    def __init__(self, data, transform=None):
+        self.data, self.raman, self.photo, self.labels = zip(*data)
+        self.labels = torch.Tensor(np.array(self.labels))
+        self.data = torch.Tensor(np.array(self.data))
+        self.raman = torch.Tensor(np.array(self.raman))
+        self.photo = torch.Tensor(np.array(self.photo))
+        self.transform = transform
+
+    def __getitem__(self, index):
+        pixel = index % (self.data.size(1) * self.data.size(2))
+        index_x = pixel % self.data.size(1)
+        index_y = pixel // self.data.size(1)
+        index_image = index // (self.data.size(1) * self.data.size(2))
+        data, raman, photo = (self.data[index_image, index_x, index_y, :], 
+                             self.raman[index_image, index_x, index_y, :], 
+                             self.photo[index_image, index_x, index_y, :])
+        if self.transform:
+            data, raman, photo = self.transform(data), self.transform(raman), self.transform(photo)
+
+        return data, raman, photo, self.labels[index_image]
+
+    def __len__(self):
+        return self.data.size(0) * self.data.size(1) * self.data.size(2)

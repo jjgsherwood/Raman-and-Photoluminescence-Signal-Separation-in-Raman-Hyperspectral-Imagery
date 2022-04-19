@@ -2,9 +2,18 @@ import numpy as np
 import numpy.polynomial.polynomial as poly
 
 from scipy import ndimage
+from pykalman import KalmanFilter
 
-
-
+def kalman_smoother(X):
+    kf = KalmanFilter(initial_state_mean=0, n_dim_obs=1)
+    kf.em(X[0][::10])
+    kf.observation_covariance *= 5
+    data = np.empty(X.shape)
+    for i, x in enumerate(X):
+        kf.initial_state_mean = x[0]
+        data[i] = kf.smooth(x)[0].flatten()
+    return data
+        
 def unit_vector_norm(X):
     return (X.T / np.sqrt((X**2).sum(axis=1))).T
 
