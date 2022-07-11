@@ -24,7 +24,7 @@ def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=t
 
         if log_step:
             if batch_idx % log_step == 0:
-                print('  {}| {:5d}/{:5d}| bits: {:2.2f}'.format(
+                print('  {}| {:5d}/{:5d}| bits: {:2.6f}'.format(
                     datetime.now().strftime('%Y-%m-%d %H:%M:%S'), batch_idx,
                     len(loader), acc_func(y, y_)
                 ), flush=True)
@@ -34,9 +34,16 @@ def test(model, loader, loss_func, acc_func, device=torch.device('cuda')):
     acc = []
 
     with torch.no_grad():
-        for x, *y in loader:
+        tmp = []
+        for batch_idx, (x, *y) in enumerate(loader):
             x = x.to(device)
             y_ = model(x)
-            acc.append(acc_func(y, y_))
+            loss = acc_func(y, y_)
+            print('{}| Validation {:5d}/{:5d}| bits: {:2.6f}'.format(
+                datetime.now().strftime('%Y-%m-%d %H:%M:%S'), batch_idx,
+                len(loader), loss
+            ), flush=True)
             
-    return np.mean(acc)
+            tmp.append(loss.cpu().detach().numpy())
+        print(f"Validation average loss: {np.mean(tmp)}")
+            
