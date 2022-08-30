@@ -1,0 +1,11 @@
+Metadata-Version: 1.1
+Name: MRobustPCA
+Version: 0.1
+Summary: A scikit-learn-compatible implementation of Robust PCA using M-estimator loss.
+Home-page: https://github.com/bsharchilev/RobustPCA
+Author: Boris Sharchilev
+Author-email: bsharchilev@gmail.com
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
+Classifier: Development Status :: 3 - Alpha
