@@ -63,6 +63,7 @@ class TensorDataset(Dataset):
         return self.data.size(0)*self.patches_per_images
 
 def split_data(dataset, test_size=TEST_RATIO, seed=42):
+    """ Something might be wrong here """
     np.random.seed(seed)
     train, test = train_test_split(dataset.data, test_size=test_size)
     train_dataset = copy.copy(dataset)
@@ -101,18 +102,29 @@ def load_liver_all(data):
     data = create_dataset_1x1(data)
     return torch.Tensor(data)
 
+def split_data_per_image(dataset, test_size=TEST_RATIO):
+    n_images = dataset.data.shape[0]
+    n_test_images = int(TEST_RATIO * n_images)
+    indices = random.sample(range(n_images), n_test_images)
+    reverse_indices = [i for i in range(n_images) if i not in indices]
+    train_dataset = copy.copy(dataset)
+    train_dataset.split(reverse_indices)
+    test_dataset  = copy.copy(dataset)
+    test_dataset.split(indices)
+    return train_dataset, test_dataset
+
 def load_splitdata(data, batch_size):
     # tensor_data = torch.Tensor(data)
     dataset = SplitDataset(data)
 
     # test data and train data are split on image level
     # Thus a whole images is either test data or train data
-    train_dataset, test_dataset = split_data(dataset)
+    train_dataset, test_dataset = split_data_per_image(dataset)
 
-    train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
-                              drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
+    train_loader = DataLoader(train_dataset, batch_size, shuffle=False,
+                              drop_last=True, pin_memory=False, num_workers=NUM_WORKERS)
     test_loader = DataLoader(test_dataset, batch_size, shuffle=False,
-                             drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
+                             drop_last=True, pin_memory=False, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader
 
@@ -127,6 +139,12 @@ class SplitDataset(Dataset):
         self.raman = torch.Tensor(np.array(self.raman))
         self.photo = torch.Tensor(np.array(self.photo))
         self.transform = transform
+        
+    def split(self, indices):
+        self.data = self.data[indices]
+        self.raman = self.raman[indices]
+        self.photo = self.photo[indices]
+        self.labels = self.labels[indices]
 
     def __getitem__(self, index):
         pixel = index % (self.data.size(1) * self.data.size(2))
@@ -139,6 +157,7 @@ class SplitDataset(Dataset):
         if self.transform:
             data, raman, photo = self.transform(data), self.transform(raman), self.transform(photo)
 
+#         return data, raman, photo, (index_image, index_x, index_y)
         return data, raman, photo, self.labels[index_image]
 
     def __len__(self):

@@ -5,21 +5,24 @@ import torch.nn as nn
 from torch.distributions import Normal
 
 import numpy as np
+import math
 
 
 def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=torch.device('cuda')):
     model.train()
 
     for batch_idx, (x, *y) in enumerate(loader):
+        optimizer.zero_grad()
+        
         x = x.to(device)      
         y_ = model(x)
 
         loss = loss_func(y, y_)
 
-        optimizer.zero_grad()
-        model.zero_grad()
         loss.backward()
-
+        
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
+        
         optimizer.step()
 
         if log_step:
