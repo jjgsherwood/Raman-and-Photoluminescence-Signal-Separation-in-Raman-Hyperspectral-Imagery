@@ -4,6 +4,10 @@ import copy
 from scipy.fft import dct
 from sklearn.decomposition import PCA
 
+"""
+TODO: Fix the name FWHM or HWHM, also check if the calculating is correct (factor two more or less)
+"""
+
 def MAPE(x, y):
     return np.mean(np.abs(1 - y/x))
 
@@ -111,8 +115,11 @@ class RemoveNoiseFFTPCA():
             if self.k is None:
                 x_new = self.__LPF_manual__(x)
 
-        if self.algorithm == ['PCA', 'LPF_PCA', 'PCA_LPF']:
+        if self.algorithm in ['LPF_PCA', 'PCA_LPF']:
             x_new = self.__PCA__(x, x_new)
+            
+        if self.algorithm in ['PCA', 'PCA_LPF']:
+            x_new = self.__PCA__(x, x)        
             
         if self.algorithm == 'PCA_LPF':
             x_new = self.__LPF_auto__(x_new)
