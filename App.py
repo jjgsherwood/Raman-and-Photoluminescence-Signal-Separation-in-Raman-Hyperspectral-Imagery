@@ -64,10 +64,12 @@ class MainWindow(qtw.QWidget):
         parentLayout.addWidget(groupbox)
 
     def addPreProcessMethodPanel(self, parentLayout):
+        """
+        Setting for the new number of wavenumbers (min_step, max_step, predetermined number)
+        """
         groupbox = qtw.QGroupBox("Extra Preprocessing steps")
         grid = qtw.QGridLayout()
         groupbox.setLayout(grid)
-
 
         checkbox = qtw.QCheckBox("Remove cosmic ray noise")
         checkbox.stateChanged.connect(self.changePreProcessingState(0))
@@ -77,10 +79,14 @@ class MainWindow(qtw.QWidget):
         checkbox.stateChanged.connect(self.changePreProcessingState(1))
         checkboxlayout = Widget.AddIconToWidget(checkbox, qtw.QStyle.SP_MessageBoxInformation)
         grid.addLayout(checkboxlayout, 1, 0)
-        checkbox = qtw.QCheckBox("Make wavenumber steps constant")
-        checkbox.stateChanged.connect(self.changePreProcessingState(2))
-        checkboxlayout = Widget.AddIconToWidget(checkbox, qtw.QStyle.SP_MessageBoxWarning)
+        self.checkbox1 = qtw.QCheckBox("Make wavenumber steps constant between samples")
+        self.checkbox1.stateChanged.connect(self.changePreProcessingState(2))
+        checkboxlayout = Widget.AddIconToWidget(self.checkbox1, qtw.QStyle.SP_MessageBoxInformation)
         grid.addLayout(checkboxlayout, 2, 0)
+        self.checkbox2 = qtw.QCheckBox("Make wavenumber steps constant within a sample")
+        self.checkbox2.stateChanged.connect(self.changePreProcessingState(3))
+        checkboxlayout = Widget.AddIconToWidget(self.checkbox2, qtw.QStyle.SP_MessageBoxWarning)
+        grid.addLayout(checkboxlayout, 3, 0)
 
         parentLayout.addWidget(groupbox)
 
@@ -88,6 +94,10 @@ class MainWindow(qtw.QWidget):
         def clickBox(state):
             if state == qtc.Qt.Checked:
                 self.preprocessing_methods.add(box)
+                # box 3 can not be enabled while box 2 is not.
+                if box == 2:
+                    self.preprocessing_methods.add(3)
+                    self.checkbox2.setChecked(True)
             else:
                 self.preprocessing_methods.remove(box)
         return clickBox
@@ -132,6 +142,8 @@ class MainWindow(qtw.QWidget):
                 self.dirFB.setEnabled(True)
                 self.filesFB.setEnabled(False)
                 self.filesFB.clear()
+                self.waveFB.setEnabled(False)
+                self.waveFB.clear()
             else:
                 self.dirFB.setEnabled(False)
                 self.filesFB.setEnabled(True)

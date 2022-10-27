@@ -3,11 +3,10 @@ import numpy as np
 
 # from scipy.fft import dct
 # from sklearn.decomposition import PCA
-from scipy.optimize import nnls
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (20.0, 10.0)
-# plt.rcParams['figure.figsize'] = (10.0, 5.0)
-plt.rcParams['figure.dpi'] = 500
+# from scipy.optimize import nnls
+# import matplotlib.pyplot as plt
+# plt.rcParams['figure.figsize'] = (20.0, 10.0)
+# plt.rcParams['figure.dpi'] = 500
 
 # def gaussian(x, mu, sigma):
 #     x = x.reshape(-1,1)
@@ -38,22 +37,22 @@ def uniform(x, a, width):
         if b+width > x.shape[0]:
             width = x.shape[0]-b
         x[max(0,b):b+width, i*s] = 1
-        x[max(0,b):b+width, i*s+1] = np.linspace(0, 1, width)**1 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+2] = np.linspace(0, 1, width)**2 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+3] = np.linspace(0, 1, width)**3 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+4] = np.linspace(0, 1, width)**4 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+5] = np.linspace(1, 0, width)**2 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+6] = np.linspace(1, 0, width)**4 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+7] = np.linspace(1, 0, width)**1 #* np.log(np.linspace(1e-4, 1, width)) 
-        x[max(0,b):b+width, i*s+8] = np.linspace(1, 0, width)**3 #* np.log(np.linspace(1e-4, 1, width)) 
+        x[max(0,b):b+width, i*s+1] = np.linspace(0, 1, width)**1 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+2] = np.linspace(0, 1, width)**2 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+3] = np.linspace(0, 1, width)**3 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+4] = np.linspace(0, 1, width)**4 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+5] = np.linspace(1, 0, width)**2 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+6] = np.linspace(1, 0, width)**4 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+7] = np.linspace(1, 0, width)**1 #* np.log(np.linspace(1e-4, 1, width))
+        x[max(0,b):b+width, i*s+8] = np.linspace(1, 0, width)**3 #* np.log(np.linspace(1e-4, 1, width))
     return x
 
 class line_approximation():
     def __init__(self, order=0, size=1300):
         space = np.linspace(0,1,size)
         self.uniform = uniform(space, np.linspace(0,1,20, endpoint=False), size//20)
-        self.kernel = self.uniform 
-        
+        self.kernel = self.uniform
+
     def __call__(self, x, w=None):
         if w is not None:
             p, *_ = np.linalg.lstsq(w @ self.kernel, w @ x, rcond=None)
@@ -72,7 +71,7 @@ class photo_approximation():
             self.RBF = gaussian(space, mu, sigma)
 #             self.uniform = uniform(space, np.linspace(0,1,5, endpoint=False), size//5)
             self.kernel = np.concatenate((self.M, self.RBF), 1)
-        
+
     def __call__(self, x, w=None):
         if w is not None:
             p, *_ = np.linalg.lstsq(w @ self.kernel, w @ x, rcond=None)
@@ -90,7 +89,7 @@ class preliminary_photo_approximation():
         else:
             self.RBF = gaussian(space, mu, sigma)
             self.kernel = np.concatenate((self.M, self.RBF), 1)
-        
+
     def __call__(self, x, w=None):
         x = np.log(x)
         if w is not None:
@@ -98,6 +97,3 @@ class preliminary_photo_approximation():
         else:
             p, *_ = np.linalg.lstsq(self.kernel, x, rcond=None)
         return np.exp(np.sum(self.kernel * p, 1))
-    
-    
-    

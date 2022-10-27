@@ -16,14 +16,14 @@ def RMSPE(x, y):
     
 
 class RemoveNoiseFFTPCA():
-    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_HWHM=2, error_function=MAPE, Print=False):
+    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function=MAPE, Print=False):
         """
         Method to remove noise from raw data or split data.
         
         algorithm: choices are {'PCA', 'LPF', 'LPF_PCA', 'PCA_LPF'}.
             PCA: Only use PCA to reduce noise in the signal. Noise can be automatically be determined or specified.
             LPF: Only uses a low pass filter to reduce noise in the signal. 
-                If percentage_noise is not specified, wavenumbers and min_HWHM are used to reduce the noise.
+                If percentage_noise is not specified, wavenumbers and min_FWHM are used to reduce the noise.
                 LPF works by transforming the signal with DCT (discreet cosine transform) and removing the high frequencies.
                 Because of the boundery condintion of DCT, 
                 averaging the high frequency preserves the edges of the signal better.
@@ -31,14 +31,14 @@ class RemoveNoiseFFTPCA():
             PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
                 Warning final noise is can be higher than calculated percentage_noise, 
                 because only PCA depends on the percentage_noise, which is either automated or not.
-                The LPF part depends always on the wavenumbers and minimum HWHM.
+                The LPF part depends always on the wavenumbers and minimum FWHM.
                 This is not the case with LPF_PCA because PCA get the filtered signal.
                 Important to note: applying LPF after LPF_PCA would not change the output.
         percentage_noise: is the level of noise in the total signal.
             if None, the noise is determined with a LPF, 
-            where all freqencies are removed with a smaller HWHM than min_HWHM.
-        wavenumbers: needed to determine the HWHM only used when percentage_noise is None.
-        min_HWHM: determines the level of noise in the data, only used wehn percentage_noise is None.
+            where all freqencies are removed with a smaller FWHM than min_FWHM.
+        wavenumbers: needed to determine the FWHM only used when percentage_noise is None.
+        min_FWHM: determines the level of noise in the data, only used wehn percentage_noise is None.
         error_function: determines how the noise is calculated default is MAPE (mean absolute percentage error).
             RMSPE (root mean squared percentage error) can also be used 
             or any other function defined by the user with parameters target and prediction.       
@@ -47,8 +47,8 @@ class RemoveNoiseFFTPCA():
 
         if percentage_noise is None:
             if wavenumbers is None:
-                raise ValueError("Either the percentage_noise must be specified or the wavenumbers and min_HWHM must be specified!")
-            self.k = int((wavenumbers[-1] - wavenumbers[0]) / (2*min_HWHM))
+                raise ValueError("Either the percentage_noise must be specified or the wavenumbers and min_FWHM must be specified!")
+            self.k = int(2 * (wavenumbers[-1] - wavenumbers[0]) / (3*min_FWHM))
                         
         if algorithm not in {'PCA', 'LPF', 'LPF_PCA', 'PCA_LPF'}:
             raise ValueError("algorithm must be set to: PCA, LPF, LPF_PCA, PCA_LPF.")
