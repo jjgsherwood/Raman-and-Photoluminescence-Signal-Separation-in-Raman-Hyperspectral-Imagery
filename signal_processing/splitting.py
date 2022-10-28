@@ -13,39 +13,39 @@ import numpy as np
 #     x = np.exp(-0.5* ((x - mu) / sigma)**2)
 #     return x
 
-def sigmoid(x):
-    return 1/(1 + np.exp(-x))
-
-def tanh(x):
-    return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
+# def sigmoid(x):
+#     return 1/(1 + np.exp(-x))
+#
+# def tanh(x):
+#     return (np.exp(x) - np.exp(-x)) / (np.exp(x) + np.exp(-x))
 
 def gaussian(x, mu, sigma):
     x = x.reshape(-1,1)
     x = np.exp(-0.5* ((x - mu).reshape(-1,1) / sigma)**2)
     return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
 
-def logistic_sigmoid(x, mu, sigma):
-    x = x.reshape(-1,1)
-    x = sigmoid((x - mu).reshape(-1,1) / sigma)
-    return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
+# def logistic_sigmoid(x, mu, sigma):
+#     x = x.reshape(-1,1)
+#     x = sigmoid((x - mu).reshape(-1,1) / sigma)
+#     return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
 
-def uniform(x, a, width):
-    s = 9
-    x = np.zeros((*x.shape, a.shape[0] * s))
-    for i, b in enumerate(a * x.shape[0]):
-        b = int(b)
-        if b+width > x.shape[0]:
-            width = x.shape[0]-b
-        x[max(0,b):b+width, i*s] = 1
-        x[max(0,b):b+width, i*s+1] = np.linspace(0, 1, width)**1 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+2] = np.linspace(0, 1, width)**2 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+3] = np.linspace(0, 1, width)**3 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+4] = np.linspace(0, 1, width)**4 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+5] = np.linspace(1, 0, width)**2 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+6] = np.linspace(1, 0, width)**4 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+7] = np.linspace(1, 0, width)**1 #* np.log(np.linspace(1e-4, 1, width))
-        x[max(0,b):b+width, i*s+8] = np.linspace(1, 0, width)**3 #* np.log(np.linspace(1e-4, 1, width))
-    return x
+# def uniform(x, a, width):
+#     s = 9
+#     x = np.zeros((*x.shape, a.shape[0] * s))
+#     for i, b in enumerate(a * x.shape[0]):
+#         b = int(b)
+#         if b+width > x.shape[0]:
+#             width = x.shape[0]-b
+#         x[max(0,b):b+width, i*s] = 1
+#         x[max(0,b):b+width, i*s+1] = np.linspace(0, 1, width)**1 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+2] = np.linspace(0, 1, width)**2 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+3] = np.linspace(0, 1, width)**3 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+4] = np.linspace(0, 1, width)**4 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+5] = np.linspace(1, 0, width)**2 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+6] = np.linspace(1, 0, width)**4 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+7] = np.linspace(1, 0, width)**1 #* np.log(np.linspace(1e-4, 1, width))
+#         x[max(0,b):b+width, i*s+8] = np.linspace(1, 0, width)**3 #* np.log(np.linspace(1e-4, 1, width))
+#     return x
 
 class line_approximation():
     def __init__(self, order=0, size=1300):
