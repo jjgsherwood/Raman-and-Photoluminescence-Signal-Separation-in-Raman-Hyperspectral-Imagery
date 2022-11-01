@@ -5,7 +5,7 @@ DESIGNER = 0
 if DESIGNER:
     import test
 
-    class MainWindow(qtw.QMainWindow, test.Ui_MainWindow):
+    class MainWindow(QMainWindow, test.Ui_MainWindow):
         def __init__(self):
             super().__init__()
             self.setupUi(self)
@@ -15,7 +15,7 @@ else:
 
 
 def main():
-    app = qtw.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     form = MainWindow()
     form.show()
     app.exec_()

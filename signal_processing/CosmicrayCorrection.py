@@ -25,9 +25,8 @@ class remove_cosmicrays():
                  n_times=7,
                  FWHM_smoothing=3,
                  min_FWHM=5,
-                 region_padding_find_peaks=5,
+                 region_padding=5,
                  occurrence_percentage=0.01,
-                 extend_interpolate_region=5,
                  interpolate_degree=3):
         """
         Removes cosmic ray noise and return the new image plus the positions of the cosimic rays
@@ -40,16 +39,16 @@ class remove_cosmicrays():
                         The LBF is then used to smooth the signal is spectral dimension.
         min_FWHM: This FWHM is a criteria for when it is or is not cosmic ray instead of Raman.
                   Everything smaller than this value passes the criteria for cosmic rays.
-        region_padding_find_peaks: It is possible that the identified spike is a few wavenumbers (expected <5)
-                                   left or right of the spike location,
-                                   therefore paddding is used to be sure to find the spike.
+        region_padding: It is possible that the identified spike is a few wavenumbers (expected <5)
+                        left or right of the spike location,
+                        therefore paddding is used to be sure to find the spike.
+                        It is also used for removing the cosmic ray noise.
+                        The region around the spike is used to interpolate the new data.
+                        This value determines how large this region is.
         occurrence_percentage: If a spike at a certain wavenumber occurs very often
                                (more than occurrence_percentage of the image),
                                than it is probably not a cosmic ray spike but
                                a Raman spike with a FWHW lower than min_FWHM.
-        extend_interpolate_region: When removing the cosmic ray noise the region
-                                   around the spike is used to interpolate the new data.
-                                   This value determines how large this region is.
         interpolate_degree: When removing the cosmic ray noise the region
                             around the spike is used to interpolate the new data.
                             This can be done with an interpolation degree between 1 to 5
@@ -59,7 +58,7 @@ class remove_cosmicrays():
         self.n_times = n_times
         self.min_FWHM = min_FWHM
         self.k = int(2*(wavenumbers[-1] - wavenumbers[0]) / (3*FWHM_smoothing))
-        self.region_padding = region_padding_find_peaks
+        self.region_padding = region_padding
         self.occ_per = occurrence_percentage
         self.extend = extend_interpolate_region
         self.k = interpolate_degree
@@ -77,7 +76,7 @@ class remove_cosmicrays():
         minimum distance between spike location and right or left is used as width.
         linear interpolate between spike location min width and spike location plus width
         """
-        extend = self.extend
+        extend = self.region_padding
         for (x,y), dct in cosmic_ray_points.items():
             for left, right in dct.values():
                 if right == img.shape[-1]-1:

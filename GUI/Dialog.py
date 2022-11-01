@@ -5,32 +5,32 @@ OPENFILES = 1
 OPENDIRECTORY = 2
 SAVEFILE = 3
 
-class FileBrowser(qtw.QWidget):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=qtc.QDir.currentPath()):
+class FileBrowser(QWidget):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath()):
         super().__init__()
-        layout = qtw.QHBoxLayout()
+        layout = QHBoxLayout()
         self.setLayout(layout)
         self.browser_mode = mode
         self.filter = filter
         self.dirpath = dirpath
         self.filepaths = []
 
-        self.label = qtw.QLabel()
+        self.label = QLabel()
         self.label.setText(title)
-        self.label.setFont(qtg.QFont("Arial",weight=qtg.QFont.Bold))
+        self.label.setFont(QFont("Arial",weight=QFont.Bold))
         width = self.label.fontMetrics().boundingRect(self.label.text()).width()
         self.label.setFixedWidth(width+10)
-        self.label.setAlignment(qtc.Qt.AlignLeft | qtc.Qt.AlignVCenter)
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         layout.addWidget(self.label)
 
-        self.lineEdit = qtw.QPlainTextEdit(self)
-        self.lineEdit.setVerticalScrollBarPolicy(qtc.Qt.ScrollBarAlwaysOff)
+        self.lineEdit = QPlainTextEdit(self)
+        self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.lineEdit.setFixedWidth(320)
         self.lineEdit.setFixedHeight(self.lineEdit.fontMetrics().boundingRect("TEST").height()+10)
 
         layout.addWidget(self.lineEdit)
 
-        self.button = qtw.QPushButton('Search')
+        self.button = QPushButton('Search')
         self.button.clicked.connect(self.setFile)
         layout.addWidget(self.button)
         layout.addStretch()
@@ -60,16 +60,16 @@ class FileBrowser(qtw.QWidget):
     def setFile(self):
         if self.browser_mode == OPENFILE:
             caption = 'Choose File'
-            func = qtw.QFileDialog.getOpenFileName
+            func = QFileDialog.getOpenFileName
         elif self.browser_mode == OPENFILES:
             caption = 'Choose Files'
-            func = qtw.QFileDialog.getOpenFileNames
+            func = QFileDialog.getOpenFileNames
         elif self.browser_mode == OPENDIRECTORY:
             caption='Choose Directory'
-            def func(*args, **kwargs): return [qtw.QFileDialog.getExistingDirectory(**{name: value for name,value in kwargs.items() if name != "filter"})]
+            def func(*args, **kwargs): return [QFileDialog.getExistingDirectory(**{name: value for name,value in kwargs.items() if name != "filter"})]
         elif self.browser_mode == SAVEFILE:
             caption='Save/Save As'
-            func = qtw.QFileDialog.getSaveFileName
+            func = QFileDialog.getSaveFileName
         else:
             raise ValueError("FileBrowser only excepts modes Defined in Dialog (0,1,2,3)")
 
@@ -104,7 +104,7 @@ class FileBrowser(qtw.QWidget):
         return self.filepaths
 
 class FileBrowserEnableQtw(FileBrowser):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=qtc.QDir.currentPath(), widget=None):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath(), widget=None):
         super().__init__(title, mode=mode, filter=filter, dirpath=dirpath)
 
         if widget is None:

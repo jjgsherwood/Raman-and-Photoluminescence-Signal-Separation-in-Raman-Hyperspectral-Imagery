@@ -2,9 +2,9 @@
 import os
 import sys
 
-import PyQt5.QtWidgets as qtw
-import PyQt5.QtGui as qtg
-import PyQt5.QtCore as qtc
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
 
 # Import own Raman Modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
