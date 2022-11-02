@@ -2,6 +2,7 @@ from StartUp import *
 
 import Dialog
 import Widget
+import Process
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -39,7 +40,7 @@ class MainWindow(QWidget):
                                                    filter='text files (*.txt) ;; csv files (*.csv) ;; numpy arrays (*.npy)',
                                                    dirpath='../data',
                                                    widget=self.waveFB)
-        self.dirFB   = Dialog.FileBrowser('Open Dir', Dialog.OPENDIRECTORY)
+        self.dirFB = Dialog.FileBrowser('Open Directory', Dialog.OPENDIRECTORY)
         self.dirFB.setEnabled(False)
         self.waveFB.setEnabled(False)
 
@@ -61,10 +62,10 @@ class MainWindow(QWidget):
         parentLayout.addWidget(groupbox)
 
     def addRemoveCosmicRayNoisePanel(self):
-        groupbox = QGroupBox("Remove cosmic ray noise")
-        groupbox.setCheckable(True)
+        self.cosmic_ray_checkbox = QGroupBox("Remove cosmic ray noise")
+        self.cosmic_ray_checkbox.setCheckable(True)
         subgrid = QGridLayout()
-        groupbox.setLayout(subgrid)
+        self.cosmic_ray_checkbox.setLayout(subgrid)
 
         width = 70
 
@@ -123,7 +124,7 @@ class MainWindow(QWidget):
         spinboxlayout = Widget.AddIconToWidget(self.interpolate_degree_sb, QStyle.SP_MessageBoxInformation, icontext="\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 5, 1)
 
-        return groupbox
+        return self.cosmic_ray_checkbox
 
     def addPreProcessMethodPanel(self, parentLayout):
         """
@@ -144,9 +145,10 @@ class MainWindow(QWidget):
 
         checkboxlayout = Widget.AddIconToWidget(QLabel("info"), QStyle.SP_MessageBoxInformation, "Replaces saturated datapoints with the average of neighbouring datapoints.")
         HLayout1.addLayout(checkboxlayout)
-        self.saturation_region = Widget.EditableComboBox(QIntValidator)
-        self.saturation_region.addItem('region size 3', '3')
-        self.saturation_region.addItem('region size 5', '5')
+        self.saturation_region = Widget.EditableComboBox(QIntValidator, minimum=3)
+        self.saturation_region.addItem('region size 3', 3)
+        self.saturation_region.addItem('region size 5', 5)
+        self.saturation_region.addItem('region size 7', 7)
         self.saturation_region.addItem('Type here for custom value', '----')
         checkboxlayout = Widget.AddIconToWidget(self.saturation_region, QStyle.SP_MessageBoxInformation, "Make sure that if you type a custom you press enter.\nValue should only contain numbers e.g. 3\nThe unity is in indices.")
         HLayout1.addLayout(checkboxlayout)
@@ -171,6 +173,7 @@ class MainWindow(QWidget):
         VLayout1.addLayout(checkboxlayout)
 
         self.consistent_all = QCheckBox("Make wavenumbers consistent\nbetween all images.")
+        self.consistent_all.setChecked(True)
         checkboxlayout = Widget.AddIconToWidget(self.consistent_all, QStyle.SP_MessageBoxInformation, "This makes sure that all spectra contain the same wavenumbers.\nThis makes comparing spectra between images possible.")
         VLayout1.addLayout(checkboxlayout)
 
@@ -201,24 +204,166 @@ class MainWindow(QWidget):
         hlayout = QHBoxLayout()
         hlayout.addStretch()
 
+        button = QPushButton("Quit")
+        button.clicked.connect(self.quit)
+        hlayout.addWidget(button)
         button = QPushButton("Cancel")
         button.clicked.connect(self.cancel)
         hlayout.addWidget(button)
         button = QPushButton("Start")
         button.setToolTip('This will start processing the selected files')
         button.setToolTipDuration(5000)
-        button.clicked.connect(self.process)
+        button.clicked.connect(self.run)
         hlayout.addWidget(button)
         parentLayout.addLayout(hlayout)
 
-    def cancel(self):
+    def quit(self):
+        try:
+            self.p.terminate()
+        except AttributeError:
+            pass
         self.close()
 
-    def process(self):
+    def cancel(self):
+        try:
+            if not self.p.is_alive():
+                return
+        except AttributeError:
+            pass
+        else:
+            self.p.terminate()
+            print("process canceled")
+            QMessageBox.information(self, "Process Canceled", "The current process is canceled")
+
+    def run(self):
+        """
+        read out all the values and start the process function
+        """
+        # make sure not another progres is running
+        try:
+            if self.p.is_alive():
+                QMessageBox.warning(self, "Process Error", "Currently there is already a program running!\nPleas press cancel before starting a new process.")
+                return
+        except AttributeError:
+            pass
+
+        if (output := self.__get_files()) is None:
+            return
+
+        if (preprocessing_variables := self.__get_preprocessing_variables()) is None:
+            return
+
+        # show variables
+        if SHOW_INPUT:
+            msg = QMessageBox(self)
+            msg.setIcon(QMessageBox.Information)
+            msg.setText(f"See selected parameters below:")
+            msg.setInformativeText('<br>'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items())))
+            msg.setWindowTitle("Inspect given parameters")
+            try:
+                wavefiles = '\n'.join(output[1])
+            except IndexError:
+                wavefiles = ''
+            msg.setDetailedText("The following files are selected: \n\n" + '\n'.join(output[0]) + "\n\n" + wavefiles)
+            msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            te = msg.findChild(QTextEdit)
+            if te is not None:
+                te.setLineWrapMode(QTextEdit.NoWrap)
+                te.parent().setFixedWidth(te.document().idealWidth() + te.document().documentMargin() + te.verticalScrollBar().width())
+                te.setFixedHeight(300)
+            if QMessageBox.Cancel == msg.exec_():
+                return
+
+        args = [(output, preprocessing_variables, None)]
+        self.p = multiprocess(target=Process.run, args=args)
+        self.p.start()
+
+    def __get_preprocessing_variables(self):
+        """
+        check and get the value for the preprocessing step.
+        """
+        preprocessing_variables = {}
+        if not self.cleaning_checkbox.isChecked():
+            return preprocessing_variables
+
+        if self.saturation_checkbox.isChecked():
+            preprocessing_variables['saturation_width'] = self.saturation_region.currentData()
+            if preprocessing_variables['saturation_width'] == '----':
+                try:
+                    preprocessing_variables['saturation_width'] = int(self.saturation_region.itemText(self.saturation_region.currentIndex()))
+                except ValueError:
+                    dlg = QMessageBox.warning(self, "Input Error", "Manual region size is selected,\nbut no whole number is given!\n\nDo not forget to press enter.")
+                    return
+
+        if self.wavenumber_checkbox.isChecked():
+            preprocessing_variables['stepsize'] = self.constant_wavenumber_choice.currentData()
+            if preprocessing_variables['stepsize'] == '----':
+                try:
+                    preprocessing_variables['stepsize'] = float(self.constant_wavenumber_choice.itemText(self.constant_wavenumber_choice.currentIndex()))
+                except ValueError:
+                    dlg = QMessageBox.warning(self, "Input Error", "Manual wavenumber stepsize is selected,\nbut no number is given!\n\nDo not forget to press enter.")
+                    return
+
+            preprocessing_variables['all_images_same_stepsize'] = self.consistent_all.isChecked()
+
+
+        if self.cosmic_ray_checkbox.isChecked():
+            preprocessing_variables['n_times'] = self.n_times_sb.value()
+            preprocessing_variables['FWHM_smoothing'] = self.FWHM_smoothing_sb.value()
+            preprocessing_variables['region_padding'] = self.region_padding_sb.value()
+            preprocessing_variables['max_FWHM'] = self.max_FWHM_sb.value()
+            preprocessing_variables['max_oc'] = self.max_oc_sb.value()
+            preprocessing_variables['interpolate_degree'] = self.interpolate_degree_sb.value()
+
+        return preprocessing_variables
+
+    def __get_files(self):
+        """
+        read the filenames and check compatibility.
+        """
         if self.dirFB.isEnabled(): # process whole directory
+            # check if a directory is selected
+            if not self.dirFB.getPaths():
+                dlg = QMessageBox.warning(self, "Input Error", "Please select a folder!")
+                return
+
+            npy_files = glob.glob(self.dirFB.getPaths()[0]+'/*.npy')
+            wave_files = glob.glob(self.dirFB.getPaths()[0]+'/*Wavenumbers.npy')
+            txt_files = glob.glob(self.dirFB.getPaths()[0]+'/*.txt')
+            # check if there are numpy files in the folder and a wavenumber file
+            if npy_files and wave_files:
+                if len(wave_files) == 1:
+                    return npy_files, wave_files
+                for file in npy_files:
+                    if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
+                        dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
+                        return
+                return npy_files, wave_files
+            elif txt_files:
+                return (txt_files,)
+            else:
+                dlg = QMessageBox.warning(self, "Input Error", "Files in folder could not be loaded!\n\nNo .txt files were found in the folder!\nNo .npy files were found in the folder!\nOr ..wavernumbers.npy was missing in the folder!")
             return
         else: # process the selected files
-            return
+            files = self.filesFB.getPaths()
+            if not files:
+                dlg = QMessageBox.warning(self, "Input Error", "No files were selected!")
+                return
+
+            if self.filesFB.widget.isEnabled():
+                wave_files = self.waveFB.getPaths()
+                if len(wave_files) == 1:
+                    return files, wave_files
+                for file in files:
+                    if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
+                        dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
+                        return
+                return npy_files, wave_files
+            else:
+                return (files,)
+
+        dlg = QMessageBox.warning(self, "Input Error", "Something unexpected went wrong!")
+        return
 
     def onChangeFileInput(self):
         radioButton = self.sender()

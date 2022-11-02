@@ -43,17 +43,16 @@ class AddIconAndTextToWidget(AddIconToWidget):
         self.addWidget(self.text)
 
 class EditableComboBox(QComboBox):
-    def __init__(self, validator):
+    def __init__(self, validator, minimum=0):
         QComboBox.__init__(self)
         self.currentIndexChanged.connect(self.fix)
         self.setInsertPolicy(QComboBox.InsertAtCurrent)
         self.validator = validator(self.lineEdit())
-        self.validator.setBottom(0.00)
+        self.validator.setBottom(minimum)
 
     def fix(self, index):
         if (self.currentData() == '----'):
             self.setEditable(True)
-            self.setValidator(self.float_validator)
-
+            self.setValidator(self.validator)
         else:
             self.setEditable(False)

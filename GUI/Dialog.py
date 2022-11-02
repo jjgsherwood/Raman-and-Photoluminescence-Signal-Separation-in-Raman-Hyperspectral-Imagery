@@ -6,7 +6,7 @@ OPENDIRECTORY = 2
 SAVEFILE = 3
 
 class FileBrowser(QWidget):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath()):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=DEFAULT_DIR):
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -66,7 +66,8 @@ class FileBrowser(QWidget):
             func = QFileDialog.getOpenFileNames
         elif self.browser_mode == OPENDIRECTORY:
             caption='Choose Directory'
-            def func(*args, **kwargs): return [QFileDialog.getExistingDirectory(**{name: value for name,value in kwargs.items() if name != "filter"})]
+            # remove filter as keyword
+            def func(*args, **kwargs): return [QFileDialog.getExistingDirectory(**{name: value for name,value in kwargs.items() if name != "filter"})], ""
         elif self.browser_mode == SAVEFILE:
             caption='Save/Save As'
             func = QFileDialog.getSaveFileName
