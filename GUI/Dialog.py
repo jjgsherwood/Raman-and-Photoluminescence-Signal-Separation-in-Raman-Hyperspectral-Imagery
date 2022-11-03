@@ -92,7 +92,7 @@ class FileBrowser(QWidget):
         width = 0
         height = 10
         for file in self.filepaths:
-            new_width = self.lineEdit.fontMetrics().boundingRect(file).width()
+            new_width = self.lineEdit.fontMetrics().boundingRect(file).width() + 10
             height += self.lineEdit.fontMetrics().boundingRect(file).height()-1
             width = max(width, new_width)
         self.lineEdit.setFixedWidth(width+10)
