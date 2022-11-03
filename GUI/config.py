@@ -19,6 +19,3 @@ DEFAULT_DIR = [dir+'/' for dir in glob.glob(__user_dir+'/*') if 'doc' in dir.low
 
 # this gives an extra dialog to check input variables
 SHOW_INPUT = False
-
-# if True the files are loaded without checking each line of the file for X,Y,wavenumbers
-FAST_LOADING = True

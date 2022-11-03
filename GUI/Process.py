@@ -1,13 +1,20 @@
 import pandas as pd
 import numpy as np
 from config import *
+from signal_processing import WavenumberCorrection as WaveC
+
 
 def run(args):
-    files, preprocessing_variables, variables = args
-    data, wavenumbers = load_files(files)
+    files, fast_loading, preprocessing_variables, variables = args
+    data, wavenumbers = load_files(files, fast_loading)
 
-def load_files(files):
-    print(f"start, number of files {len(files[0])}", flush=True)
+    # if preprocessing_variables['']
+    # new_data, new_wavenumbers = WaveC.correct_wavenumbers_between_samples(data, wavenumbers)
+    # new_data, new_wavenumbers = WaveC.correct_wavenumbers_within_samples(data, wavenumbers)
+
+
+def load_files(files, fast_loading):
+    print(f"start loading data, number of files {len(files[0])}", flush=True)
     if len(files) == 1:
         files = files[0]
         # check how data is stored
@@ -17,6 +24,8 @@ def load_files(files):
             else:
                 header = None
 
+        all_images = []
+        all_wavenumbers = []
         for file in files:
             print(f"opening file {file}", flush=True)
             df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[])
@@ -31,18 +40,15 @@ def load_files(files):
             X = list(sorted(np.unique(data[:,0])))
             Y = list(sorted(np.unique(data[:,1])))
 
-            if FAST_LOADING:
+            if fast_loading:
                 if header is None:
-                    for d in data:
-                        i = X.index(d[0])
-                        j = Y.index(d[1])
-                        img[i,j,:] = d[2:]
+                    data = data[:,2:]
+                    img = data.reshape(len(X), len(Y), len(wavenumbers))
                 else:
                     data = data[:,3]
                     data = data.reshape(len(Y), len(X), len(wavenumbers))
                     data = np.rollaxis(data, 1, 0)
-                    data = data[:,:,::-1]
-                    print(data.shape)
+                    img = data[:,:,::-1]
             else:
                 img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float64)
                 if header is None:
@@ -60,10 +66,22 @@ def load_files(files):
                     wavenumbers = np.array(wavenumbers)
 
             print(f"{file} loaded", flush=True)
+            all_images.append(img)
+            all_wavenumbers.append(wavenumbers)
 
-            # data = df.to_numpy()[:,:4]
-            #
-            # wavenumbers = sorted(list(np.unique(data[:,2])))
-            # X = np.array(sorted(list(np.unique(data[:,0]))))
-            # Y = np.array(sorted(list(np.unique(data[:,1]))))
-    return None, None
+        return all_images, all_wavenumbers
+    else:
+        files, wave_files = files[0], files[1]
+        if len(wave_files) == 1:
+            all_wavenumbers = [np.load(wave_files)]
+            all_images = []
+            for file in files:
+                all_images.append(np.load(file))
+        else:
+            all_images = []
+            all_wavenumbers = []
+            for file in files:
+                all_images.append(np.load(file))
+                all_wavenumbers.append(np.load(file.replace('.npy','_Wavenumbers.npy')))
+        print(f"data loaded", flush=True)
+        return all_images, all_wavenumbers

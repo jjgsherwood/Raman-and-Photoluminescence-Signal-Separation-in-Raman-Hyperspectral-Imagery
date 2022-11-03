@@ -59,9 +59,18 @@ class MainWindow(QWidget):
         radiobutton.toggled.connect(self.onChangeFileInput)
         grid.addWidget(radiobutton, 2, 0)
 
+        self.fast_import = QCheckBox("Fast loading")
+        self.fast_import.setChecked(True)
+        fast_import_layout = Widget.AddIconToWidget(self.fast_import, QStyle.SP_MessageBoxWarning,icontext="Instead of reading the file and placing each x,y,wavenumber at the correct place in the data array.\nThis assumes that the data is stored in a hardcoded order.")
+        grid.addLayout(fast_import_layout, 3, 0)
+
         parentLayout.addWidget(groupbox)
 
     def addRemoveCosmicRayNoisePanel(self):
+
+        """
+        TODO at unity explanation to info hover events.
+        """
         self.cosmic_ray_checkbox = QGroupBox("Remove cosmic ray noise")
         self.cosmic_ray_checkbox.setCheckable(True)
         subgrid = QGridLayout()
@@ -86,42 +95,42 @@ class MainWindow(QWidget):
         self.n_times_sb.setRange(2.0,15.0)
         self.n_times_sb.setValue(7.0)
         self.n_times_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.n_times_sb, QStyle.SP_MessageBoxInformation,icontext="The value is a factor which sets the boundery when a point is classified as cosmic ray noise.\nA higher value means that a point is less likely to be classified as cosim ray noise.\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.n_times_sb, QStyle.SP_MessageBoxInformation,icontext="The value is a factor which sets the boundery when a point is classified as cosmic ray noise.\nA higher value means that a point is less likely to be classified as cosim ray noise.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 0, 1)
 
         self.FWHM_smoothing_sb = QDoubleSpinBox()
         self.FWHM_smoothing_sb.setMinimum(0)
         self.FWHM_smoothing_sb.setValue(3.0)
         self.FWHM_smoothing_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.FWHM_smoothing_sb, QStyle.SP_MessageBoxInformation,icontext="This value is translated to freqency and used as a cutoff point for the low band pass filter, which is used as spectral smoothing method.\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.FWHM_smoothing_sb, QStyle.SP_MessageBoxInformation,icontext="This value is translated to freqency and used as a cutoff point for the low band pass filter, which is used as spectral smoothing method.\nThe unity is in wavenumbers.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 1, 1)
 
         self.region_padding_sb = QSpinBox()
         self.region_padding_sb.setRange(1,25)
         self.region_padding_sb.setValue(5)
         self.region_padding_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.region_padding_sb, QStyle.SP_MessageBoxInformation, icontext="\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.region_padding_sb, QStyle.SP_MessageBoxInformation, icontext="This value determines the width around the cosmic ray noise spike region.\n During spike detection this extra width is used to make sure the spike is in the identify region.\nAlso, it is used during the removal of the cosmic ray noise to make a spline fit.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 2, 1)
 
         self.max_FWHM_sb = QDoubleSpinBox()
         self.max_FWHM_sb.setMinimum(0)
         self.max_FWHM_sb.setValue(5.0)
         self.max_FWHM_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.max_FWHM_sb, QStyle.SP_MessageBoxInformation, icontext="This value sets the maximum FWHM for a cosmic ray spike.\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.max_FWHM_sb, QStyle.SP_MessageBoxInformation, icontext="This value sets the maximum FWHM for a cosmic ray spike.\nThe unity is in wavenumbers.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 3, 1)
 
         self.max_oc_sb = QDoubleSpinBox()
         self.max_oc_sb.setRange(0.0,1.0)
         self.max_oc_sb.setValue(0.01)
         self.max_oc_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.max_oc_sb, QStyle.SP_MessageBoxInformation, icontext="\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.max_oc_sb, QStyle.SP_MessageBoxInformation, icontext="This value determines when a wavenumber is wrongly identified as cosmic ray noise.\nIf the number of pixel that contain the same (wavenumber) cosmic ray noise exceeds this percentage, the cosmic rays noise is not removed.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 4, 1)
 
         self.interpolate_degree_sb = QSpinBox()
         self.interpolate_degree_sb.setRange(1,5)
         self.interpolate_degree_sb.setValue(3)
         self.interpolate_degree_sb.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.interpolate_degree_sb, QStyle.SP_MessageBoxInformation, icontext="\nSee the thesis for a full explanation.")
+        spinboxlayout = Widget.AddIconToWidget(self.interpolate_degree_sb, QStyle.SP_MessageBoxInformation, icontext="This value determines the interpolation degree of the splinefit used to remove the cosmic ray spikes.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 5, 1)
 
         return self.cosmic_ray_checkbox
@@ -247,7 +256,7 @@ class MainWindow(QWidget):
         except AttributeError:
             pass
 
-        if (output := self.__get_files()) is None:
+        if (files := self.__get_files()) is None:
             return
 
         if (preprocessing_variables := self.__get_preprocessing_variables()) is None:
@@ -274,7 +283,9 @@ class MainWindow(QWidget):
             if QMessageBox.Cancel == msg.exec_():
                 return
 
-        args = [(output, preprocessing_variables, None)]
+        fast_import = self.fast_import.isChecked()
+
+        args = [(files, fast_import, preprocessing_variables, None)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
@@ -334,11 +345,15 @@ class MainWindow(QWidget):
             if npy_files and wave_files:
                 if len(wave_files) == 1:
                     return npy_files, wave_files
+                checked_npy_files = []
                 for file in npy_files:
+                    if '_Wavenumbers.npy' in file or 'FileNames' in file:
+                        continue
                     if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
                         dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
                         return
-                return npy_files, wave_files
+                    checked_npy_files.append(file)
+                return checked_npy_files, wave_files
             elif txt_files:
                 return (txt_files,)
             else:
