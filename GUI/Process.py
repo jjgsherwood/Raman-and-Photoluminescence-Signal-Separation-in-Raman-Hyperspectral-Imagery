@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from config import *
 
 def run(args):
     files, preprocessing_variables, variables = args
@@ -38,7 +39,7 @@ def load_files(files):
                         img[i,j,:] = d[2:]
                 else:
                     data = data[:,3]
-                    data.reshape(len(Y), len(X), len(wavenumbers))
+                    data = data.reshape(len(Y), len(X), len(wavenumbers))
                     data = np.rollaxis(data, 1, 0)
                     data = data[:,:,::-1]
                     print(data.shape)
