@@ -1,15 +1,4 @@
-import os
-import sys
-import glob
-from multiprocessing import Pool
-from multiprocessing import Process as multiprocess
-
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-
-
+from StartUp import *
 
 class AddIconToWidget(QHBoxLayout):
     def __init__(self, widget, icon, icontext="", *args, **kwargs):

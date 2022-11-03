@@ -30,12 +30,20 @@ def load_files(files):
             X = list(sorted(np.unique(data[:,0])))
             Y = list(sorted(np.unique(data[:,1])))
 
-            img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float64)
-
             if FAST_LOADING:
-                pass
-
+                if header is None:
+                    for d in data:
+                        i = X.index(d[0])
+                        j = Y.index(d[1])
+                        img[i,j,:] = d[2:]
+                else:
+                    data = data[:,3]
+                    data.reshape(len(Y), len(X), len(wavenumbers))
+                    data = np.rollaxis(data, 1, 0)
+                    data = data[:,:,::-1]
+                    print(data.shape)
             else:
+                img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float64)
                 if header is None:
                     for d in data:
                         i = X.index(d[0])

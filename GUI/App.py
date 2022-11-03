@@ -1,14 +1,4 @@
-import os
-import sys
-import glob
-from multiprocessing import Pool
-from multiprocessing import Process as multiprocess
-
-
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
-
+from StartUp import *
 
 import Dialog
 import Widget
