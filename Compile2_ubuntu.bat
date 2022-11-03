@@ -1,0 +1,1 @@
+pyinstaller "GUI/StartUp.py" --distpath="~/Documents/Master_thesis" -n Raman_split -i="~/Documents/Master_thesis/Logo.png" --hidden-import="appdirs" --hidden-import="packaging" --hidden-import="packaging.version" --hidden-import="packaging.specifiers" --hidden-import="packaging.requirements" --hidden-import="six"

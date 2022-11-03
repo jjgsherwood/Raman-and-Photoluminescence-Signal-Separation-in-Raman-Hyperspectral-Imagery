@@ -32,19 +32,23 @@ def load_files(files):
 
             img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float64)
 
-            if header is None:
-                for d in data:
-                    i = X.index(d[0])
-                    j = Y.index(d[1])
-                    img[i,j,:] = d[2:]
-            else:
-                for d in data:
-                    i = X.index(d[0])
-                    j = Y.index(d[1])
-                    w = wavenumbers.index(d[2])
-                    img[i,j,w] = d[3]
+            if FAST_LOADING:
+                pass
 
-                wavenumbers = np.array(wavenumbers)
+            else:
+                if header is None:
+                    for d in data:
+                        i = X.index(d[0])
+                        j = Y.index(d[1])
+                        img[i,j,:] = d[2:]
+                else:
+                    for d in data:
+                        i = X.index(d[0])
+                        j = Y.index(d[1])
+                        w = wavenumbers.index(d[2])
+                        img[i,j,w] = d[3]
+
+                    wavenumbers = np.array(wavenumbers)
 
             print(f"{file} loaded", flush=True)
 

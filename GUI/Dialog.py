@@ -1,4 +1,15 @@
-from StartUp import *
+import os
+import sys
+import glob
+from multiprocessing import Pool
+from multiprocessing import Process as multiprocess
+
+
+from PyQt5.QtCore import *
+from PyQt5.QtGui import *
+from PyQt5.QtWidgets import *
+
+
 
 OPENFILE = 0
 OPENFILES = 1

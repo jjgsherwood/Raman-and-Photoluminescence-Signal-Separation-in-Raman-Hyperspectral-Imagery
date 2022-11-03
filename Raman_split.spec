@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(
-    ['GUI\\StartUp.py'],
+    ['GUI/StartUp.py'],
     pathex=[],
     binaries=[],
     datas=[],
@@ -37,7 +37,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['J:\\Jonne\\Dropbox\\NDT Imaging Tool\\Logo\\Icon.ico'],
+    icon=['~/Documents/Master_thesis/Logo.png'],
 )
 coll = COLLECT(
     exe,
