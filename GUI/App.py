@@ -19,15 +19,41 @@ class MainWindow(QWidget):
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
+        self.move(50, 50)
 
         # set layout
         vlayout = QVBoxLayout()
         self.setLayout(vlayout)
 
         self.fileBrowserPanel(vlayout)
+        self.fileSavePanel(vlayout)
         self.addPreProcessMethodPanel(vlayout)
         vlayout.addStretch()
         self.addButtonPanel(vlayout)
+
+    def fileSavePanel(self, parentLayout):
+        """ Checkboxes to save each file as a txt and/or npy. Also save in new dir or same folder"""
+
+        groupbox = QGroupBox("File save section")
+        grid = QVBoxLayout()
+        groupbox.setLayout(grid)
+
+        self.save_as_numpy = QCheckBox("Save as numpy file")
+        checkboxlayout = Widget.AddIconToWidget(self.save_as_numpy, QStyle.SP_MessageBoxInformation, "Loading a numpy file is much faster.\nRecommended when you only do the preprocesing\n and do the splitting later.")
+        grid.addLayout(checkboxlayout)
+
+        self.save_as_txt = QCheckBox("Save as txt file")
+        self.save_as_txt.setChecked(True)
+        checkboxlayout = Widget.AddIconToWidget(self.save_as_txt, QStyle.SP_MessageBoxInformation, "This will save the data in the horiba file format,\nno matter the initial file format.")
+        grid.addLayout(checkboxlayout)
+
+        self.save_dir = Dialog.FileBrowser('Save Directory', Dialog.OPENDIRECTORY)
+        self.save_dir.lineEdit.appendPlainText(DEFAULT_SAVE_DIR)
+        self.save_dir.filepaths = [DEFAULT_SAVE_DIR]
+        checkboxlayout = Widget.AddIconToWidget(self.save_dir, QStyle.SP_MessageBoxInformation, "A new folder will be added to this directory,\n with a timestamp and all saved data.")
+        grid.addLayout(checkboxlayout)
+
+        parentLayout.addWidget(groupbox)
 
     def fileBrowserPanel(self, parentLayout):
         groupbox = QGroupBox("File Selection section")
@@ -162,8 +188,6 @@ class MainWindow(QWidget):
         checkboxlayout = Widget.AddIconToWidget(self.saturation_region, QStyle.SP_MessageBoxInformation, "Make sure that if you type a custom you press enter.\nValue should only contain numbers e.g. 3\nThe unity is in indices.")
         HLayout1.addLayout(checkboxlayout)
 
-        VLayout.addWidget(self.saturation_checkbox)
-
         # wavenumber stettings
         self.wavenumber_checkbox = QGroupBox("Make wavenumber steps constant")
         self.wavenumber_checkbox.setCheckable(True)
@@ -190,6 +214,7 @@ class MainWindow(QWidget):
 
         # make Vertical layout complete
         VLayout.addWidget(self.wavenumber_checkbox)
+        VLayout.addWidget(self.saturation_checkbox)
 
         # make Horizontal layout complete
         HLayout.addLayout(VLayout)
@@ -199,10 +224,6 @@ class MainWindow(QWidget):
 
     def addProcessMethodPanel(self):
         """ Which noise filter to use. Which grad approximation to use. Other setting such as: Photo width (FWHM)"""
-        pass
-
-    def addSavePanel(self):
-        """ Checkboxes to save each file as a txt and/or npy. Also save in new dir or same folder"""
         pass
 
     def addDisplayPanel(self):
@@ -256,6 +277,9 @@ class MainWindow(QWidget):
         except AttributeError:
             pass
 
+        if (save_variables := self.__get_save_preference()) is None:
+            return
+
         if (files := self.__get_files()) is None:
             return
 
@@ -270,10 +294,13 @@ class MainWindow(QWidget):
             msg.setInformativeText('<br>'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items())))
             msg.setWindowTitle("Inspect given parameters")
             try:
-                wavefiles = '\n'.join(output[1])
+                wavefiles = '\n'.join(files[1])
             except IndexError:
                 wavefiles = ''
-            msg.setDetailedText("The following files are selected: \n\n" + '\n'.join(output[0]) + "\n\n" + wavefiles)
+            save_text = "The following save location is selected:\n" + save_variables['save_dir'] + "\n\n"
+            save_text += "numpy save is enabled: " + str(save_variables['save_as_numpy']) + "\n"
+            save_text += "text save is enabled: " + str(save_variables['save_as_txt']) + "\n\n"
+            msg.setDetailedText(save_text + "The following files are selected: \n\n" + '\n'.join(files[0]) + "\n\n" + wavefiles)
             msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             te = msg.findChild(QTextEdit)
             if te is not None:
@@ -285,7 +312,7 @@ class MainWindow(QWidget):
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, None)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, None)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
@@ -327,6 +354,17 @@ class MainWindow(QWidget):
             preprocessing_variables['interpolate_degree'] = self.interpolate_degree_sb.value()
 
         return preprocessing_variables
+
+    def __get_save_preference(self):
+        pref = {}
+        try:
+            pref['save_dir'] = self.save_dir.getPaths()[0]
+        except IndexError:
+            dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
+            return
+        pref['save_as_txt'] = self.save_as_txt.isChecked()
+        pref['save_as_numpy'] = self.save_as_numpy.isChecked()
+        return pref
 
     def __get_files(self):
         """

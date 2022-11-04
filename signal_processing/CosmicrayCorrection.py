@@ -60,7 +60,7 @@ class remove_cosmicrays():
         self.k = int(2*(wavenumbers[-1] - wavenumbers[0]) / (3*FWHM_smoothing))
         self.region_padding = region_padding
         self.occ_per = occurrence_percentage
-        self.extend = extend_interpolate_region
+        self.extend = region_padding
         self.k = interpolate_degree
 
     def __call__(self, img):
