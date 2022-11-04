@@ -12,7 +12,7 @@ def interpolate_image(args):
             new_data[x,y] = f(new_wavenumbers)
     return new_data
 
-def correct_wavenumbers_between_samples(data, wavenumbers):
+def correct_wavenumbers_between_samples(data, wavenumbers, stepsize='min'):
     """
     Correct wavenumbers such that the stepsize is constant and all samples have the same wavenumbers
 
@@ -25,7 +25,12 @@ def correct_wavenumbers_between_samples(data, wavenumbers):
     # and never outside the range of wavenumbers for all samples.
     left_wavenumber = np.max(wavenumbers[:,0])
     right_wavenumeber = np.min(wavenumbers[:,-1])
-    min_stepsize = np.min(wavenumbers[:,1:] - wavenumbers[:,:-1])
+    if stepsize == 'min':
+        min_stepsize = np.min(wavenumbers[:,1:] - wavenumbers[:,:-1])
+    elif stepsize == 'max':
+        min_stepsize = np.max(wavenumbers[:,1:] - wavenumbers[:,:-1])
+    else:
+        min_stepsize = stepsize
 
     # ceil to add an extra step for linspace (which includes stop)
     # This gives the stepsize that is larger than the smallest stepsize but as close as possible.
@@ -39,7 +44,7 @@ def correct_wavenumbers_between_samples(data, wavenumbers):
 
     return new_data, new_wavenumbers
 
-def correct_wavenumbers_within_samples(data, wavenumbers):
+def correct_wavenumbers_within_samples(data, wavenumbers, stepsize='min'):
     """
     Correct wavenumbers such that the stepsize is constant within a sample
 
@@ -49,6 +54,14 @@ def correct_wavenumbers_within_samples(data, wavenumbers):
         raise ValueError("The number of samples should be equal to the number of wavenumber arrays")
 
     min_stepsize = np.min(wavenumbers[:,1:] - wavenumbers[:,:-1], 1)
+
+    if stepsize == 'min':
+        min_stepsize = np.min(wavenumbers[:,1:] - wavenumbers[:,:-1], 1)
+    elif stepsize == 'max':
+        min_stepsize = np.max(wavenumbers[:,1:] - wavenumbers[:,:-1], 1)
+    else:
+        min_stepsize = stepsize * np.ones(len(data))
+
     # ceil to add an extra step for linspace (which includes stop)
     steps = np.ceil((wavenumbers[:,-1] - wavenumbers[:,0]) / min_stepsize).astype(int)
     # This gives the stepsize that is larger than the smallest stepsize but as close as possible.

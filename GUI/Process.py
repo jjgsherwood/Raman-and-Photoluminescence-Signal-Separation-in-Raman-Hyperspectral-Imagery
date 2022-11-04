@@ -7,10 +7,16 @@ from signal_processing import WavenumberCorrection as WaveC
 def run(args):
     files, fast_loading, preprocessing_variables, variables = args
     data, wavenumbers = load_files(files, fast_loading)
+    preprocessing(data, wavenumbers, preprocessing_variables)
 
-    # if preprocessing_variables['']
-    # new_data, new_wavenumbers = WaveC.correct_wavenumbers_between_samples(data, wavenumbers)
-    # new_data, new_wavenumbers = WaveC.correct_wavenumbers_within_samples(data, wavenumbers)
+
+def preprocessing(data, wavenumbers, preprocessing_variables):
+    # check if preprocessing is enabled
+    if not preprocessing_variables:
+        if preprocessing_variables['all_images_same_stepsize']:
+            new_data, new_wavenumbers = WaveC.correct_wavenumbers_between_samples(data, wavenumbers, preprocessing_variables['stepsize'])
+        else:
+            new_data, new_wavenumbers = WaveC.correct_wavenumbers_within_samples(data, wavenumbers, preprocessing_variables['stepsize'])
 
 
 def load_files(files, fast_loading):
