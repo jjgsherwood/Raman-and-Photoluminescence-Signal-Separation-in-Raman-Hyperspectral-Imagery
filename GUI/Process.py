@@ -21,10 +21,16 @@ def run(args):
     save_data(data, wavenumbers, filenames, save_variables)
     print("save complete")
 
+
+def remove_noise():
+    remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(algorithm='PCA', percentage_noise=None, wavenumbers=wavenumbers, min_HWHM=3, Print=False)
+
+    return
+
 def save_data(data, wavenumbers, filenames, save_variables):
     # save data in new folder
     timestamp = str(datetime.datetime.now()).replace(":","-")
-    save_dir = save_variables["save_dir"] + '\\' + timestamp + '\\'
+    save_dir = save_variables["save_dir"] + '//' + timestamp + '//'
     os.makedirs(save_dir, exist_ok=True)
 
     if save_variables["save_as_txt"]:
@@ -37,7 +43,7 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{name.split("/")[-1].split(".")[0]}.txt', textfile, delimiter="\t")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t")
         else:
             for name, img, w in zip(filenames, data, wavenumbers):
                 textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
@@ -46,7 +52,7 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{name.split("/")[-1].split(".")[0]}.txt', textfile, delimiter="\t")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t")
 
     if save_variables["save_as_numpy"]:
         # save wavenumbers
@@ -54,11 +60,11 @@ def save_data(data, wavenumbers, filenames, save_variables):
             np.save(f'{save_dir}Wavenumbers', wavenumbers)
         else:
             for name, w in zip(wavenumbers, data):
-                np.save(f'{save_dir}{name.split("/")[-1].split(".")[0]}_Wavenumbers', w)
+                np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}_Wavenumbers', w)
 
         # save file
         for name, img in zip(filenames, data):
-            np.save(f'{save_dir}{name.split("/")[-1].split(".")[0]}', img)
+            np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}', img)
 
 def preprocessing(data, wavenumbers, preprocessing_variables):
     # check if same stepsize is enabled.
@@ -113,7 +119,7 @@ def load_files(files, fast_loading):
         all_images = []
         all_wavenumbers = []
         for file in files:
-            print(f"opening file {file}", flush=True)
+            print(f"opening file: {file}", flush=True)
             df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[])
             data = df.to_numpy()
 
@@ -151,7 +157,7 @@ def load_files(files, fast_loading):
 
                     wavenumbers = np.array(wavenumbers)
 
-            print(f"{file} loaded", flush=True)
+            print(f"loaded: {file}", flush=True)
             all_images.append(img)
             all_wavenumbers.append(wavenumbers)
     else:

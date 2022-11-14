@@ -362,6 +362,16 @@ class MainWindow(QWidget):
         except IndexError:
             dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
             return
+
+        # check if save path exist
+        if not os.path.isdir(pref['save_dir']):
+            # check if parent of save path exist
+            parent_dir = os.path.dirname(pref['save_dir'])
+            if not os.path.isdir(parent_dir):
+                dlg = QMessageBox.warning(self, "Input Error", "Neither the save directory exist nor its parent directory!\nMake sure that at least the parent directory exists.")
+                return
+            os.makedirs(pref['save_dir'], exist_ok=True)
+            
         pref['save_as_txt'] = self.save_as_txt.isChecked()
         pref['save_as_numpy'] = self.save_as_numpy.isChecked()
         return pref
