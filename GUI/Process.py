@@ -19,11 +19,11 @@ def run(args):
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
 
     save_data(data, wavenumbers, filenames, save_variables)
-    print("save complete")
+    print("save complete", flush=True)
 
 
 def remove_noise():
-    remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(algorithm='PCA', percentage_noise=None, wavenumbers=wavenumbers, min_HWHM=3, Print=False)
+    remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(algorithm='PCA_LPF', percentage_noise=None, wavenumbers=wavenumbers, min_HWHM=3, Print=False)
 
     return
 
@@ -69,11 +69,12 @@ def save_data(data, wavenumbers, filenames, save_variables):
 def preprocessing(data, wavenumbers, preprocessing_variables):
     # check if same stepsize is enabled.
     if 'all_images_same_stepsize' in preprocessing_variables:
+        print("starting correcting for stepsize", flush=True)
         if preprocessing_variables['all_images_same_stepsize']:
             data, wavenumbers = WaveC.correct_wavenumbers_between_samples(data, wavenumbers, preprocessing_variables['stepsize'])
         else:
             data, wavenumbers = WaveC.correct_wavenumbers_within_samples(data, wavenumbers, preprocessing_variables['stepsize'])
-        print("correcting for stepsize done")
+        print("correcting for stepsize done", flush=True)
 
     # check if saturation is enabled.
     if 'saturation_width' in preprocessing_variables:
@@ -81,7 +82,7 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
 
         for i, img in enumerate(data):
             data[i] = remove_saturation(img)
-            print(f"correcting for saturation done for image {i+1} out of {len(data)}")
+            print(f"correcting for saturation done for image {i+1} out of {len(data)}", flush=True)
 
     # check if cosmic ray noise is enabled.
     if 'n_times' in preprocessing_variables:
@@ -96,12 +97,12 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
             cosmicray_removal = CosmicrayCorrection.remove_cosmicrays(wavenumbers, *args)
             for i, img in enumerate(data):
                 data[i], _ = cosmicray_removal(img)
-                print(f"correcting for cosmic ray noise done for image {i+1} out of {len(data)}")
+                print(f"correcting for cosmic ray noise done for image {i+1} out of {len(data)}", flush=True)
         else:
             for i, img in enumerate(data):
                 cosmicray_removal = CosmicrayCorrection.remove_cosmicrays(wavenumbers[i], *args)
                 data[i], _ = cosmicray_removal(img)
-                print(f"correcting for cosmic ray noise done for image {i+1} out of {len(data)}")
+                print(f"correcting for cosmic ray noise done for image {i+1} out of {len(data)}", flush=True)
 
     return data, wavenumbers
 
@@ -118,8 +119,8 @@ def load_files(files, fast_loading):
 
         all_images = []
         all_wavenumbers = []
-        for file in files:
-            print(f"opening file: {file}", flush=True)
+        for i, file in enumerate(files):
+            print(f"opening file {i} of {len(files)}: {file}", flush=True)
             df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[])
             data = df.to_numpy()
 
@@ -157,7 +158,7 @@ def load_files(files, fast_loading):
 
                     wavenumbers = np.array(wavenumbers)
 
-            print(f"loaded: {file}", flush=True)
+            print(f"loaded  file {i} of {len(files)}: {file}", flush=True)
             all_images.append(img)
             all_wavenumbers.append(wavenumbers)
     else:

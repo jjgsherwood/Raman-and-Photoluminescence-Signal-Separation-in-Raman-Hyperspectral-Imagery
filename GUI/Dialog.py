@@ -96,7 +96,8 @@ class FileBrowser(QWidget):
             height += self.lineEdit.fontMetrics().boundingRect(file).height()-1
             width = max(width, new_width)
         self.lineEdit.setFixedWidth(width+10)
-        self.lineEdit.setFixedHeight(height)
+        self.lineEdit.setFixedHeight(min(500,height)) #max such that everything fits in the screen
+        return height <= 300
 
     def getWidth(self):
         return self.label.fontMetrics().boundingRect(self.label.text()).width() + 10
@@ -105,16 +106,20 @@ class FileBrowser(QWidget):
         return self.filepaths
 
 class FileBrowserEnableQtw(FileBrowser):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath(), widget=None):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath(), widget=None, mainPanel=None):
         super().__init__(title, mode=mode, filter=filter, dirpath=dirpath)
 
         if widget is None:
             raise ValueError("FileBrowserEnableQtw should be connected with an other widget")
         self.widget = widget
+        self.mainPanel = mainPanel
 
     def setFile(self):
-        super().setFile()
+        is_small = super().setFile()
         if self.filter_out == "numpy arrays (*.npy)":
             self.widget.setEnabled(True)
         else:
             self.widget.setEnabled(False)
+        self.mainPanel.change_layout(is_small)
+
+        # self.mainPanel.setGeometry(self.mainPanel.left, self.mainPanel.top, self.mainPanel.width, self.mainPanel.height)

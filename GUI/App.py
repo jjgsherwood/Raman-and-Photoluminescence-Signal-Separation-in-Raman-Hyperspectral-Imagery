@@ -14,24 +14,48 @@ class MainWindow(QWidget):
         self.top = 10
         self.width = 640
         self.height = 480
+        self.isSmall = True
+
         self.initUI()
+
+    def min_size(self):
+        # self.panel.resize(self.panel.sizeHint())
+        # self.mainpanel.resize(self.panel.sizeHint())
+        self.resize(self.sizeHint())
 
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.move(50, 50)
+        self.move(10, 20)
 
-        # set layout
-        vlayout = QVBoxLayout()
-        self.setLayout(vlayout)
+        # layout for main frame and buttons
+        self.mainpanel = QFrame(self)
+        self.vlayout = QVBoxLayout(self.mainpanel)
+        self.setLayout(self.vlayout)
 
-        self.fileBrowserPanel(vlayout)
-        self.fileSavePanel(vlayout)
-        self.addPreProcessMethodPanel(vlayout)
-        vlayout.addStretch()
-        self.addButtonPanel(vlayout)
+        # layout of main frame
+        self.panel = QFrame()
+        self.gridlayout = QGridLayout(self.panel)
 
-    def fileSavePanel(self, parentLayout):
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.panel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.mainpanel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        # extra layour for b configuration of panels
+        self.bLayout = QVBoxLayout()
+
+        self.fileBrowserPanel = self.makeFileBrowserPanel()
+        self.fileSavePanel = self.makeFileSavePanel()
+        self.preProcessMethodPanel = self.makePreProcessMethodPanel()
+        self.gridlayout.addWidget(self.fileBrowserPanel, 0, 0)
+        self.gridlayout.addWidget(self.fileSavePanel, 1, 0)
+        self.gridlayout.addWidget(self.preProcessMethodPanel, 2, 0)
+
+        self.vlayout.addWidget(self.panel)
+        self.buttonPanel = self.addButtonPanel()
+        self.vlayout.addWidget(self.buttonPanel)
+
+    def makeFileSavePanel(self):
         """ Checkboxes to save each file as a txt and/or npy. Also save in new dir or same folder"""
 
         groupbox = QGroupBox("File save section")
@@ -52,20 +76,22 @@ class MainWindow(QWidget):
         self.save_dir.filepaths = [DEFAULT_SAVE_DIR]
         checkboxlayout = Widget.AddIconToWidget(self.save_dir, QStyle.SP_MessageBoxInformation, "A new folder will be added to this directory,\n with a timestamp and all saved data.")
         grid.addLayout(checkboxlayout)
+        grid.addStretch()
 
-        parentLayout.addWidget(groupbox)
+        return groupbox
 
-    def fileBrowserPanel(self, parentLayout):
+    def makeFileBrowserPanel(self):
         groupbox = QGroupBox("File Selection section")
         grid = QGridLayout()
         groupbox.setLayout(grid)
 
-        self.waveFB = Dialog.FileBrowser('Select Wavenumber Info File', Dialog.OPENFILE)
+        self.waveFB = Dialog.FileBrowser('Select Wavenumber Info File',  Dialog.OPENFILE)
         self.filesFB = Dialog.FileBrowserEnableQtw('Select Raman Hyperspectral Cubes',
                                                    Dialog.OPENFILES,
                                                    filter='text files (*.txt) ;; csv files (*.csv) ;; numpy arrays (*.npy)',
                                                    dirpath='../data',
-                                                   widget=self.waveFB)
+                                                   widget=self.waveFB,
+                                                   mainPanel=self)
         self.dirFB = Dialog.FileBrowser('Open Directory', Dialog.OPENDIRECTORY)
         self.dirFB.setEnabled(False)
         self.waveFB.setEnabled(False)
@@ -90,7 +116,7 @@ class MainWindow(QWidget):
         fast_import_layout = Widget.AddIconToWidget(self.fast_import, QStyle.SP_MessageBoxWarning,icontext="Instead of reading the file and placing each x,y,wavenumber at the correct place in the data array.\nThis assumes that the data is stored in a hardcoded order.")
         grid.addLayout(fast_import_layout, 3, 0)
 
-        parentLayout.addWidget(groupbox)
+        return groupbox
 
     def addRemoveCosmicRayNoisePanel(self):
 
@@ -161,7 +187,7 @@ class MainWindow(QWidget):
 
         return self.cosmic_ray_checkbox
 
-    def addPreProcessMethodPanel(self, parentLayout):
+    def makePreProcessMethodPanel(self):
         """
         Setting for the new number of wavenumbers (min_step, max_step, predetermined number)
         """
@@ -187,6 +213,7 @@ class MainWindow(QWidget):
         self.saturation_region.addItem('Type here for custom value', '----')
         checkboxlayout = Widget.AddIconToWidget(self.saturation_region, QStyle.SP_MessageBoxInformation, "Make sure that if you type a custom you press enter.\nValue should only contain numbers e.g. 3\nThe unity is in indices.")
         HLayout1.addLayout(checkboxlayout)
+        HLayout1.addStretch()
 
         # wavenumber stettings
         self.wavenumber_checkbox = QGroupBox("Make wavenumber steps constant")
@@ -209,18 +236,22 @@ class MainWindow(QWidget):
         self.consistent_all.setChecked(True)
         checkboxlayout = Widget.AddIconToWidget(self.consistent_all, QStyle.SP_MessageBoxInformation, "This makes sure that all spectra contain the same wavenumbers.\nThis makes comparing spectra between images possible.")
         VLayout1.addLayout(checkboxlayout)
+        VLayout1.addStretch()
 
         HLayout1.addLayout(VLayout1)
+        HLayout1.addStretch()
 
         # make Vertical layout complete
         VLayout.addWidget(self.wavenumber_checkbox)
         VLayout.addWidget(self.saturation_checkbox)
+        VLayout.addStretch()
 
         # make Horizontal layout complete
         HLayout.addLayout(VLayout)
         HLayout.addWidget(self.addRemoveCosmicRayNoisePanel())
+        HLayout.addStretch()
 
-        parentLayout.addWidget(self.cleaning_checkbox)
+        return self.cleaning_checkbox
 
     def addProcessMethodPanel(self):
         """ Which noise filter to use. Which grad approximation to use. Other setting such as: Photo width (FWHM)"""
@@ -230,8 +261,9 @@ class MainWindow(QWidget):
         """ Checkboxes to say whether intermediate results and/or end results should be displayed"""
         pass
 
-    def addButtonPanel(self, parentLayout):
-        hlayout = QHBoxLayout()
+    def addButtonPanel(self):
+        container = QWidget()
+        hlayout = QHBoxLayout(container)
         hlayout.addStretch()
 
         button = QPushButton("Quit")
@@ -245,7 +277,28 @@ class MainWindow(QWidget):
         button.setToolTipDuration(5000)
         button.clicked.connect(self.run)
         hlayout.addWidget(button)
-        parentLayout.addLayout(hlayout)
+        return container
+
+    def change_layout(self, is_small):
+        self.min_size()
+        # no change
+        if is_small is None or self.isSmall == is_small:
+            return
+        self.isSmall = is_small
+
+        # remove from layour
+        if is_small:
+            self.bLayout.removeItem(self.bLayout.itemAt(0))
+        else:
+            self.gridlayout.removeItem(self.gridlayout.itemAtPosition(2,0))
+
+        # build new layout
+        if is_small:
+            self.gridlayout.addWidget(self.preProcessMethodPanel, 2, 0)
+        else:
+            self.bLayout.addWidget(self.preProcessMethodPanel)
+            self.bLayout.addStretch()
+            self.gridlayout.addLayout(self.bLayout, 0, 1)
 
     def quit(self):
         try:
@@ -371,7 +424,7 @@ class MainWindow(QWidget):
                 dlg = QMessageBox.warning(self, "Input Error", "Neither the save directory exist nor its parent directory!\nMake sure that at least the parent directory exists.")
                 return
             os.makedirs(pref['save_dir'], exist_ok=True)
-            
+
         pref['save_as_txt'] = self.save_as_txt.isChecked()
         pref['save_as_numpy'] = self.save_as_numpy.isChecked()
         return pref
@@ -386,7 +439,7 @@ class MainWindow(QWidget):
                 dlg = QMessageBox.warning(self, "Input Error", "Please select a folder!")
                 return
 
-            npy_files = glob.glob(self.dirFB.getPaths()[0]+'/*.npy')
+            npy_files = glob.glob(self.dirFB.getPaths()[0]+'/[!Wavenumbers]*.npy')
             wave_files = glob.glob(self.dirFB.getPaths()[0]+'/*Wavenumbers.npy')
             txt_files = glob.glob(self.dirFB.getPaths()[0]+'/*.txt')
             # check if there are numpy files in the folder and a wavenumber file
@@ -395,7 +448,7 @@ class MainWindow(QWidget):
                     return npy_files, wave_files
                 checked_npy_files = []
                 for file in npy_files:
-                    if '_Wavenumbers.npy' in file or 'FileNames' in file:
+                    if 'FileNames' in file:
                         continue
                     if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
                         dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
@@ -429,6 +482,7 @@ class MainWindow(QWidget):
         return
 
     def onChangeFileInput(self):
+        self.min_size()
         radioButton = self.sender()
         if radioButton.isChecked():
             if radioButton.dir:
