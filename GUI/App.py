@@ -3,6 +3,7 @@ from StartUp import *
 import Dialog
 import Widget
 import Process
+import time
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -19,18 +20,20 @@ class MainWindow(QWidget):
         self.initUI()
 
     def min_size(self):
-        # self.panel.resize(self.panel.sizeHint())
-        # self.mainpanel.resize(self.panel.sizeHint())
+        self.setMinimumSize(0, 0)
+        self.filesFB.updateGeometry()
+        self.fileBrowserPanel.updateGeometry()
+        self.panel.updateGeometry()
+        self.updateGeometry()
+
         self.resize(self.sizeHint())
 
     def initUI(self):
         self.setWindowTitle(self.title)
-        self.setGeometry(self.left, self.top, self.width, self.height)
         self.move(10, 20)
 
         # layout for main frame and buttons
-        self.mainpanel = QFrame(self)
-        self.vlayout = QVBoxLayout(self.mainpanel)
+        self.vlayout = QVBoxLayout(self)
         self.setLayout(self.vlayout)
 
         # layout of main frame
@@ -39,7 +42,6 @@ class MainWindow(QWidget):
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.panel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.mainpanel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         # extra layour for b configuration of panels
         self.bLayout = QVBoxLayout()
@@ -280,8 +282,8 @@ class MainWindow(QWidget):
         return container
 
     def change_layout(self, is_small):
-        self.min_size()
         # no change
+        self.min_size()
         if is_small is None or self.isSmall == is_small:
             return
         self.isSmall = is_small
@@ -299,6 +301,7 @@ class MainWindow(QWidget):
             self.bLayout.addWidget(self.preProcessMethodPanel)
             self.bLayout.addStretch()
             self.gridlayout.addLayout(self.bLayout, 0, 1)
+        self.min_size()
 
     def quit(self):
         try:
@@ -365,7 +368,7 @@ class MainWindow(QWidget):
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, None)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, noise_variables, None)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
@@ -481,8 +484,14 @@ class MainWindow(QWidget):
         dlg = QMessageBox.warning(self, "Input Error", "Something unexpected went wrong!")
         return
 
-    def onChangeFileInput(self):
-        self.min_size()
+    def onChangeFileInput(self, event):
+        if not event:
+            return
+
+        # also change the layout back if it was the big setting
+        if not self.isSmall:
+            self.change_layout(not self.isSmall)
+
         radioButton = self.sender()
         if radioButton.isChecked():
             if radioButton.dir:
@@ -495,3 +504,5 @@ class MainWindow(QWidget):
                 self.dirFB.setEnabled(False)
                 self.filesFB.setEnabled(True)
                 self.dirFB.clear()
+
+        self.min_size()

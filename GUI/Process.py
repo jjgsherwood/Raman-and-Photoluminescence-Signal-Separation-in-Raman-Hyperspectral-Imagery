@@ -9,7 +9,7 @@ from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, variables = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_variables, variables = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
@@ -18,14 +18,16 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
 
+    data = remove_noise(data, wavenumbers, noise_variables)
+
     save_data(data, wavenumbers, filenames, save_variables)
     print("save complete", flush=True)
 
 
-def remove_noise():
+def remove_noise(data, wavenumbers, noise_variables):
     remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(algorithm='PCA_LPF', percentage_noise=None, wavenumbers=wavenumbers, min_HWHM=3, Print=False)
 
-    return
+    return data
 
 def save_data(data, wavenumbers, filenames, save_variables):
     # save data in new folder
@@ -121,7 +123,7 @@ def load_files(files, fast_loading):
         all_wavenumbers = []
         for i, file in enumerate(files):
             print(f"opening file {i} of {len(files)}: {file}", flush=True)
-            df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[])
+            df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[], dtype=np.float32)
             data = df.to_numpy()
 
             if header is None:
@@ -143,7 +145,7 @@ def load_files(files, fast_loading):
                     data = np.rollaxis(data, 1, 0)
                     img = data[:,:,::-1]
             else:
-                img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float64)
+                img = np.empty((len(X), len(Y), len(wavenumbers)), dtype=np.float32)
                 if header is None:
                     for d in data:
                         i = X.index(d[0])

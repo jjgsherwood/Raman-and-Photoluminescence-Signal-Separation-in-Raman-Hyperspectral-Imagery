@@ -38,24 +38,7 @@ class FileBrowser(QWidget):
     def clear(self):
         self.lineEdit.clear()
         self.lineEdit.setFixedHeight(self.lineEdit.fontMetrics().boundingRect("TEST").height()+10)
-
-    def setWdith(self, width):
-        self.label.setFixedWidth(width)
-
-    def setMode(self, mode):
-        """
-        Set the mode, see class variables
-        """
-        self.mode = mode
-
-    def setFileFilter(self, text):
-        """
-        regex string to blok certain files
-        """
-        self.filter = text
-
-    def setDefaultDir(self, path):
-        self.dirpath = path
+        self.lineEdit.setFixedWidth(320)
 
     def setFile(self):
         if self.browser_mode == OPENFILE:
@@ -99,9 +82,6 @@ class FileBrowser(QWidget):
         self.lineEdit.setFixedHeight(min(500,height)) #max such that everything fits in the screen
         return height <= 300
 
-    def getWidth(self):
-        return self.label.fontMetrics().boundingRect(self.label.text()).width() + 10
-
     def getPaths(self):
         return self.filepaths
 
@@ -121,5 +101,3 @@ class FileBrowserEnableQtw(FileBrowser):
         else:
             self.widget.setEnabled(False)
         self.mainPanel.change_layout(is_small)
-
-        # self.mainPanel.setGeometry(self.mainPanel.left, self.mainPanel.top, self.mainPanel.width, self.mainPanel.height)
