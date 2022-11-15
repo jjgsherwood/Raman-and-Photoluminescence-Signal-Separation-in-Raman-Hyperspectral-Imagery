@@ -3,10 +3,12 @@ import copy
 
 from scipy.fft import dct
 from sklearn.decomposition import PCA
+from scipy import signal
 
-"""
-TODO: Fix the name FWHM or HWHM, also check if the calculating is correct (factor two more or less)
-"""
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 500
+
 
 def MAPE(x, y):
     return np.mean(np.abs(1 - y/x))
@@ -67,12 +69,48 @@ class RemoveNoiseFFTPCA():
         self.Print = Print
 
     def __LPF_auto__(self, x):
-        cosine = dct(x, type=2, norm='backward')
+        # find spike that are to similar to a dirac delta function
+        i = 0
+        grad = np.abs(x[i,10:] - x[i,:-10])
+        std_grad = np.std(grad)
+        print(std_grad)
+        position, details = signal.find_peaks(x[i], rel_height=.99, prominence=std_grad*10, width=(None,150))
+
+        print(details)
+        p = position[0]
+        half_w = int(details['widths']//2)
+        base = np.linspace(x[i,p-half_w],x[i,p+half_w],half_w*2+1)
+        spike = np.zeros(x.shape)
+        spike[i,p-half_w : p+half_w+1] = x[i,p-half_w : p+half_w+1] - base
+
+        plt.plot(x[0])
+        plt.plot(spike[0])
+        plt.axvline(position[0], color='k', alpha=0.5)
+        plt.plot(x[0]-spike[0])
+
+        cosine = dct(x-spike, type=2, norm='backward')
         cosine = cosine.T
         cosine[self.k:] = np.mean(cosine[self.k:], 0)
         """
         TODO correct for dirac delta functions
         """
+        tmp = dct(cosine.T, type=3, norm="forward")+spike
+        plt.plot(tmp[0])
+        plt.show()
+
+        plt.plot(cosine[:,0])
+        cosine = dct(x, type=2, norm='backward')
+        plt.plot(cosine[0])
+        cosine = dct(spike, type=2, norm='backward')
+        plt.plot(cosine[0])
+        plt.show()
+
+        return tmp
+
+    def __LPF_auto__(self, x):
+        cosine = dct(x, type=2, norm='backward')
+        cosine = cosine.T
+        cosine[self.k:] = np.mean(cosine[self.k:], 0)
         return dct(cosine.T, type=3, norm="forward")
 
     def __LPF_manual__(self, x):
