@@ -14,9 +14,14 @@ def MAPE(x, y):
 def RMSPE(x, y):
     return np.mean(np.sqrt(np.mean((1 - y/x)**2, 1)))
 
+STRING_TO_FUNCTION = {
+    "MAPE": MAPE,
+    "RMSPE": RMSPE
+}
+
 
 class RemoveNoiseFFTPCA():
-    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function=MAPE, Print=False):
+    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", Print=False):
         """
         Method to remove noise from raw data or split data.
 
@@ -38,7 +43,7 @@ class RemoveNoiseFFTPCA():
             if None, the noise is determined with a LPF,
             where all freqencies are removed with a smaller FWHM than min_FWHM.
         wavenumbers: needed to determine the FWHM only used when percentage_noise is None.
-        min_FWHM: determines the level of noise in the data, only used wehn percentage_noise is None.
+        min_FWHM: determines the level of noise in the data, only used when percentage_noise is None.
         error_function: determines how the noise is calculated default is MAPE (mean absolute percentage error).
             RMSPE (root mean squared percentage error) can also be used
             or any other function defined by the user with parameters target and prediction.
@@ -58,7 +63,7 @@ class RemoveNoiseFFTPCA():
 
         self.algorithm = algorithm
         self.percentage_noise = percentage_noise
-        self.error = error_function
+        self.error = STRING_TO_FUNCTION[error_function]
         self.Print = Print
 
     def __LPF_auto__(self, x):

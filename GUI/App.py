@@ -37,29 +37,114 @@ class MainWindow(QWidget):
 
         # layout of main frame
         self.panel = QFrame()
-        self.gridlayout = QGridLayout(self.panel)
+        self.gridlayout = QHBoxLayout(self.panel)
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.panel.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        # extra layour for b configuration of panels
-        self.bLayout = QVBoxLayout()
+        # left and right columns
+        self.leftLayout = QGridLayout()
+        self.rightLayout = QGridLayout()
 
         self.fileBrowserPanel = self.makeFileBrowserPanel()
         self.fileSavePanel = self.makeFileSavePanel()
         self.preProcessMethodPanel = self.makePreProcessMethodPanel()
-        self.gridlayout.addWidget(self.fileBrowserPanel, 0, 0)
-        self.gridlayout.addWidget(self.fileSavePanel, 1, 0)
-        self.gridlayout.addWidget(self.preProcessMethodPanel, 2, 0)
+        self.noiseRemovalPanel = self.makeNoiseRemovalPanel()
+        self.fillPanel = QFrame()
 
+        self.leftLayout.addWidget(self.fileBrowserPanel, 0, 0)
+        self.leftLayout.addWidget(self.fileSavePanel, 1, 0)
+        self.leftLayout.addWidget(self.preProcessMethodPanel, 2, 0)
+
+        self.rightLayout.addWidget(self.noiseRemovalPanel, 1, 0)
+        self.rightLayout.addWidget(self.fillPanel, 2, 0)
+
+        # join the columns into one panel
+        self.gridlayout.addLayout(self.leftLayout)
+        self.gridlayout.addLayout(self.rightLayout)
+
+        # make the complete mainframe
         self.vlayout.addWidget(self.panel)
         self.buttonPanel = self.addButtonPanel()
         self.vlayout.addWidget(self.buttonPanel)
 
+    def makeNoiseRemovalPanel(self):
+        self.noise_removal_checkbox = QGroupBox("Noise removal section")
+        self.noise_removal_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.noise_removal_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.noise_removal_checkbox.setLayout(grid)
+
+
+        self.noise_removal_algorithm = QComboBox()
+        self.noise_removal_algorithm.addItem('LPF')
+        self.noise_removal_algorithm.addItem('LPF_PCA')
+        self.noise_removal_algorithm.addItem('PCA')
+        self.noise_removal_algorithm.addItem('PCA_LPF')
+        self.noise_removal_algorithm.setCurrentIndex(3)
+        comboBoxlayout = Widget.AddIconToWidget(self.noise_removal_algorithm, QStyle.SP_MessageBoxInformation, icontext=
+"""PCA: Only use PCA to reduce noise in the signal. Noise can be automatically be determined or specified.
+LPF: Only uses a low pass filter to reduce noise in the signal.
+        If percentage_noise is not specified, wavenumbers and min_FWHM are used to reduce the noise.
+        LPF works by transforming the signal with DCT (discreet cosine transform) and removing the high frequencies.
+        Because of the boundery condintion of DCT,
+        averaging the high frequency preserves the edges of the signal better.
+LPF_PCA: First uses LPF and than PCA. Can be used automated or with specific percentage_noise.
+PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
+        Warning final noise is can be higher than calculated percentage_noise,
+        because only PCA depends on the percentage_noise, which is either automated or not.
+        The LPF part depends always on the wavenumbers and minimum FWHM.
+        This is not the case with LPF_PCA because PCA get the filtered signal.
+        Important to note: applying LPF after LPF_PCA would not change the output.""")
+        text = QLabel("Noise removal algorithm")
+        grid.addWidget(text, 0, 0)
+        grid.addLayout(comboBoxlayout, 0, 1)
+
+        self.noise_error_algorithm = QComboBox()
+        self.noise_error_algorithm.addItem('MAPE')
+        self.noise_error_algorithm.addItem('RMSPE')
+        comboBoxlayout = Widget.AddIconToWidget(self.noise_error_algorithm, QStyle.SP_MessageBoxInformation, icontext="This determines how the noise is calculated default is MAPE (mean absolute percentage error).\nThe other option is RMSPE (root mean squared percentage error).")
+        text = QLabel("Calculating noise percentage algorithm")
+        grid.addWidget(text, 1, 0)
+        grid.addLayout(comboBoxlayout, 1, 1)
+
+        radiobutton = QRadioButton("Automated noise removal based on FWHM:")
+        radiobutton.setChecked(True)
+        radiobutton.auto = True
+        radiobutton.toggled.connect(self.onChangeAutoNoise)
+        grid.addWidget(radiobutton, 2, 0)
+
+        radiobutton = QRadioButton("Noise removal based on percentage:")
+        radiobutton.auto = False
+        radiobutton.toggled.connect(self.onChangeAutoNoise)
+        grid.addWidget(radiobutton, 3, 0)
+
+        width = 65
+        self.automated_FWHM = QDoubleSpinBox()
+        self.automated_FWHM.setRange(0.0,30.0)
+        self.automated_FWHM.setValue(3.0)
+        self.automated_FWHM.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.automated_FWHM, QStyle.SP_MessageBoxInformation,icontext=
+"""This FWHM is used to calculate the cutoff point for the LPF (low pass band filter) after DCT (discreet cosine transform) is applied.
+For each sample a percentage noise is calculated based on the error betweeen the sample and the LPF result of that sample.
+This creates a more stable noise removal algorithm were the amount of noise removed is almost independent of Raman and photoluminences.""")
+        grid.addLayout(spinboxlayout, 2, 1)
+
+        self.percentage_noise = QDoubleSpinBox()
+        self.percentage_noise.setRange(0.0,1.0)
+        self.percentage_noise.setValue(0.01)
+        self.percentage_noise.setMinimumWidth(width)
+        self.percentage_noise.setSingleStep(0.01)
+        self.percentage_noise.setEnabled(False)
+        spinboxlayout = Widget.AddIconToWidget(self.percentage_noise, QStyle.SP_MessageBoxInformation,icontext="This determines the percentage noise in each sample.\nThe noise removal alogirithm will keep removing noise till this percentage is reached.\nExcept when choosing PCA_LPF, see removal algorithm for more information.")
+        grid.addLayout(spinboxlayout, 3, 1)
+
+        return self.noise_removal_checkbox
+
     def makeFileSavePanel(self):
         """ Checkboxes to save each file as a txt and/or npy. Also save in new dir or same folder"""
-
         groupbox = QGroupBox("File save section")
+        groupbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         grid = QVBoxLayout()
         groupbox.setLayout(grid)
 
@@ -83,6 +168,7 @@ class MainWindow(QWidget):
 
     def makeFileBrowserPanel(self):
         groupbox = QGroupBox("File Selection section")
+        groupbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         grid = QGridLayout()
         groupbox.setLayout(grid)
 
@@ -120,10 +206,6 @@ class MainWindow(QWidget):
         return groupbox
 
     def addRemoveCosmicRayNoisePanel(self):
-
-        """
-        TODO at unity explanation to info hover events.
-        """
         self.cosmic_ray_checkbox = QGroupBox("Remove cosmic ray noise")
         self.cosmic_ray_checkbox.setCheckable(True)
         subgrid = QGridLayout()
@@ -176,6 +258,7 @@ class MainWindow(QWidget):
         self.max_oc_sb.setRange(0.0,1.0)
         self.max_oc_sb.setValue(0.01)
         self.max_oc_sb.setMinimumWidth(width)
+        self.max_oc_sb.setSingleStep(0.01)
         spinboxlayout = Widget.AddIconToWidget(self.max_oc_sb, QStyle.SP_MessageBoxInformation, icontext="This value determines when a wavenumber is wrongly identified as cosmic ray noise.\nIf the number of pixel that contain the same (wavenumber) cosmic ray noise exceeds this percentage, the cosmic rays noise is not removed.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 4, 1)
 
@@ -193,6 +276,7 @@ class MainWindow(QWidget):
         Setting for the new number of wavenumbers (min_step, max_step, predetermined number)
         """
         self.cleaning_checkbox = QGroupBox("Extra Preprocessing steps")
+        self.cleaning_checkbox.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         self.cleaning_checkbox.setCheckable(True)
         HLayout = QHBoxLayout()
         self.cleaning_checkbox.setLayout(HLayout)
@@ -214,7 +298,6 @@ class MainWindow(QWidget):
         self.saturation_region.addItem('Type here for custom value', '----')
         checkboxlayout = Widget.AddIconToWidget(self.saturation_region, QStyle.SP_MessageBoxInformation, "Make sure that if you type a custom you press enter.\nValue should only contain numbers e.g. 3\nThe unity is in indices.")
         HLayout1.addLayout(checkboxlayout)
-        HLayout1.addStretch()
 
         # wavenumber stettings
         self.wavenumber_checkbox = QGroupBox("Make wavenumber steps constant")
@@ -237,20 +320,16 @@ class MainWindow(QWidget):
         self.consistent_all.setChecked(True)
         checkboxlayout = Widget.AddIconToWidget(self.consistent_all, QStyle.SP_MessageBoxInformation, "This makes sure that all spectra contain the same wavenumbers.\nThis makes comparing spectra between images possible.")
         VLayout1.addLayout(checkboxlayout)
-        VLayout1.addStretch()
 
         HLayout1.addLayout(VLayout1)
-        HLayout1.addStretch()
 
         # make Vertical layout complete
         VLayout.addWidget(self.wavenumber_checkbox)
         VLayout.addWidget(self.saturation_checkbox)
-        VLayout.addStretch()
 
         # make Horizontal layout complete
         HLayout.addLayout(VLayout)
         HLayout.addWidget(self.addRemoveCosmicRayNoisePanel())
-        HLayout.addStretch()
 
         return self.cleaning_checkbox
 
@@ -289,17 +368,15 @@ class MainWindow(QWidget):
 
         # remove from layour
         if is_small:
-            self.bLayout.removeItem(self.bLayout.itemAt(0))
+            self.rightLayout.removeItem(self.rightLayout.itemAtPosition(0,0))
         else:
-            self.gridlayout.removeItem(self.gridlayout.itemAtPosition(2,0))
+            self.leftLayout.removeItem(self.leftLayout.itemAtPosition(2,0))
 
         # build new layout
         if is_small:
-            self.gridlayout.addWidget(self.preProcessMethodPanel, 2, 0)
+            self.leftLayout.addWidget(self.preProcessMethodPanel, 2, 0)
         else:
-            self.bLayout.addWidget(self.preProcessMethodPanel)
-            self.bLayout.addStretch()
-            self.gridlayout.addLayout(self.bLayout, 0, 1)
+            self.rightLayout.addWidget(self.preProcessMethodPanel, 0, 0)
         self.min_size()
 
     def quit(self):
@@ -341,12 +418,20 @@ class MainWindow(QWidget):
         if (preprocessing_variables := self.__get_preprocessing_variables()) is None:
             return
 
+        if (noise_removal_variables := self.__get_noise_removal_variables()) is None:
+            return
+
         # show variables
         if SHOW_INPUT:
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Information)
-            msg.setText(f"See selected parameters below:")
-            msg.setInformativeText('<br>'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items())))
+            text = "See selected preprocessing parameters below:\n\n"
+            text += '\n'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items()))
+            text += '\n\n'
+            text += "See selected noise removal parameters below:\n\n"
+            text += '\n'.join((str(k)+' : '+str(v) for k,v in noise_removal_variables.items()))
+
+            msg.setText(text)
             msg.setWindowTitle("Inspect given parameters")
             try:
                 wavefiles = '\n'.join(files[1])
@@ -367,13 +452,33 @@ class MainWindow(QWidget):
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, noise_variables, None)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, None)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
+    def __get_noise_removal_variables(self):
+        """
+        check and get the values for the noise removal step.
+        """
+        noise_removal_variables = {}
+        if not self.noise_removal_checkbox.isChecked():
+            return noise_removal_variables
+
+        noise_removal_variables["noise_removal_algorithm"] = self.noise_removal_algorithm.currentText()
+        noise_removal_variables["noise_error_algorithm"] = self.noise_error_algorithm.currentText()
+
+        if self.automated_FWHM.isEnabled():
+            noise_removal_variables["noise_automated_FWHM"] = self.automated_FWHM.value()
+            noise_removal_variables["noise_percenteage"] = None
+        else:
+            noise_removal_variables["noise_percenteage"] = self.percentage_noise.value()
+            noise_removal_variables["noise_automated_FWHM"] = None
+            
+        return noise_removal_variables
+
     def __get_preprocessing_variables(self):
         """
-        check and get the value for the preprocessing step.
+        check and get the values for the preprocessing step.
         """
         preprocessing_variables = {}
         if not self.cleaning_checkbox.isChecked():
@@ -492,16 +597,27 @@ class MainWindow(QWidget):
             self.change_layout(not self.isSmall)
 
         radioButton = self.sender()
-        if radioButton.isChecked():
-            if radioButton.dir:
-                self.dirFB.setEnabled(True)
-                self.filesFB.setEnabled(False)
-                self.filesFB.clear()
-                self.waveFB.setEnabled(False)
-                self.waveFB.clear()
-            else:
-                self.dirFB.setEnabled(False)
-                self.filesFB.setEnabled(True)
-                self.dirFB.clear()
+        if radioButton.dir:
+            self.dirFB.setEnabled(True)
+            self.filesFB.setEnabled(False)
+            self.filesFB.clear()
+            self.waveFB.setEnabled(False)
+            self.waveFB.clear()
+        else:
+            self.dirFB.setEnabled(False)
+            self.filesFB.setEnabled(True)
+            self.dirFB.clear()
 
         self.min_size()
+
+    def onChangeAutoNoise(self, event):
+        if not event:
+            return
+
+        radioButton = self.sender()
+        if radioButton.auto:
+            self.automated_FWHM.setEnabled(True)
+            self.percentage_noise.setEnabled(False)
+        else:
+            self.automated_FWHM.setEnabled(False)
+            self.percentage_noise.setEnabled(True)

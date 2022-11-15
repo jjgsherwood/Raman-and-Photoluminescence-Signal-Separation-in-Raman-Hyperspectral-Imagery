@@ -6,10 +6,10 @@ import datetime
 from config import *
 
 from signal_processing import WavenumberCorrection as WaveC
-from signal_processing import SaturationCorrection, CosmicrayCorrection
+from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, noise_variables, variables = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, variables = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
@@ -18,14 +18,36 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
 
-    data = remove_noise(data, wavenumbers, noise_variables)
+    data = remove_noise(data, wavenumbers, noise_removal_variables)
 
     save_data(data, wavenumbers, filenames, save_variables)
     print("save complete", flush=True)
 
 
-def remove_noise(data, wavenumbers, noise_variables):
-    remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(algorithm='PCA_LPF', percentage_noise=None, wavenumbers=wavenumbers, min_HWHM=3, Print=False)
+def remove_noise(data, wavenumbers, noise_removal_variables):
+    # check if each image has his own wavenumbers or if they are all equal.
+    if len(wavenumbers.shape) == 1:
+        remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(
+            algorithm = noise_removal_variables['noise_removal_algorithm'],
+            percentage_noise = noise_removal_variables["noise_percenteage"],
+            wavenumbers = wavenumbers,
+            min_FWHM = noise_removal_variables["noise_automated_FWHM"],
+            error_function = noise_removal_variables["noise_error_algorithm"]
+        )
+        for i, img in enumerate(data):
+            data[i] = remove_noise_cube_fft(img.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"Removing noise for image {i+1} out of {len(data)} done", flush=True)
+    else:
+        for i, img in enumerate(data):
+            remove_noise_cube_fft = smoothing.RemoveNoiseFFTPCA(
+                algorithm = noise_removal_variables['noise_removal_algorithm'],
+                percentage_noise = noise_removal_variables["noise_percenteage"],
+                wavenumbers = wavenumbers[i],
+                min_FWHM = noise_removal_variables["noise_automated_FWHM"],
+                error_function = noise_removal_variables["noise_error_algorithm"]
+            )
+            data[i] = remove_noise_cube_fft(img.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"Removing noise for image {i+1} out of {len(data)} done", flush=True)
 
     return data
 
@@ -95,6 +117,7 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
                 preprocessing_variables['max_oc'],
                 preprocessing_variables['interpolate_degree']]
 
+        print(wavenumbers.shape)
         if len(wavenumbers.shape) == 1:
             cosmicray_removal = CosmicrayCorrection.remove_cosmicrays(wavenumbers, *args)
             for i, img in enumerate(data):
@@ -166,7 +189,7 @@ def load_files(files, fast_loading):
     else:
         files, wave_files = files[0], files[1]
         if len(wave_files) == 1:
-            all_wavenumbers = [np.load(wave_files)]
+            all_wavenumbers = np.load(wave_files[0])
             all_images = []
             for file in files:
                 all_images.append(np.load(file))
