@@ -25,7 +25,6 @@ class MainWindow(QWidget):
         self.fileBrowserPanel.updateGeometry()
         self.panel.updateGeometry()
         self.updateGeometry()
-
         self.resize(self.sizeHint())
 
     def initUI(self):

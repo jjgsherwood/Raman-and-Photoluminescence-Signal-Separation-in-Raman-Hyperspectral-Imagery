@@ -78,6 +78,14 @@ class FileBrowser(QWidget):
             new_width = self.lineEdit.fontMetrics().boundingRect(file).width() + 10
             height += self.lineEdit.fontMetrics().boundingRect(file).height()-1
             width = max(width, new_width)
+
+        # if it is to high make a scrollbar and at width for the scrollbar
+        if height > 500:
+            self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            width += 10
+        else:
+            self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        print(width, height)
         self.lineEdit.setFixedWidth(width+10)
         self.lineEdit.setFixedHeight(min(500,height)) #max such that everything fits in the screen
         return height <= 300
