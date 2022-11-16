@@ -11,8 +11,13 @@ class AddIconToWidget(QHBoxLayout):
 
         self.addWidget(widget)
         self.addWidget(self.label)
+
         # This makes sure the icon is next to the widget
-        self.insertStretch(-1, 1)
+        self.label.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+        widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
+
         self.label.installEventFilter(self)
 
     def __pre_init__(self, *args, **kwargs):

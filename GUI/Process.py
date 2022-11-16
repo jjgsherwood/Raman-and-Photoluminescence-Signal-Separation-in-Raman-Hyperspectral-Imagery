@@ -23,7 +23,6 @@ def run(args):
     save_data(data, wavenumbers, filenames, save_variables)
     print("save complete", flush=True)
 
-
 def remove_noise(data, wavenumbers, noise_removal_variables):
     # check if each image has his own wavenumbers or if they are all equal.
     if len(wavenumbers.shape) == 1:
@@ -32,7 +31,10 @@ def remove_noise(data, wavenumbers, noise_removal_variables):
             percentage_noise = noise_removal_variables["noise_percenteage"],
             wavenumbers = wavenumbers,
             min_FWHM = noise_removal_variables["noise_automated_FWHM"],
-            error_function = noise_removal_variables["noise_error_algorithm"]
+            error_function = noise_removal_variables["noise_error_algorithm"],
+            gradient_width = noise_removal_variables["noise_gradient_width"],
+            spike_padding = noise_removal_variables["noise_spike_padding"],
+            max_spike_width = noise_removal_variables["noise_max_spike_width"]
         )
         for i, img in enumerate(data):
             data[i] = remove_noise_cube_fft(img.reshape(-1, img.shape[-1])).reshape(img.shape)
@@ -44,7 +46,10 @@ def remove_noise(data, wavenumbers, noise_removal_variables):
                 percentage_noise = noise_removal_variables["noise_percenteage"],
                 wavenumbers = wavenumbers[i],
                 min_FWHM = noise_removal_variables["noise_automated_FWHM"],
-                error_function = noise_removal_variables["noise_error_algorithm"]
+                error_function = noise_removal_variables["noise_error_algorithm"],
+                gradient_width = noise_removal_variables["noise_gradient_width"],
+                spike_padding = noise_removal_variables["noise_spike_padding"],
+                max_spike_width = noise_removal_variables["noise_max_spike_width"]
             )
             data[i] = remove_noise_cube_fft(img.reshape(-1, img.shape[-1])).reshape(img.shape)
             print(f"Removing noise for image {i+1} out of {len(data)} done", flush=True)
@@ -145,7 +150,7 @@ def load_files(files, fast_loading):
         all_images = []
         all_wavenumbers = []
         for i, file in enumerate(files):
-            print(f"opening file {i} of {len(files)}: {file}", flush=True)
+            print(f"opening file {i+1} of {len(files)}: {file}", flush=True)
             df = pd.read_csv(file, delimiter='\t', skipinitialspace=True, header=header, skiprows=[], dtype=np.float32)
             data = df.to_numpy()
 
@@ -183,7 +188,7 @@ def load_files(files, fast_loading):
 
                     wavenumbers = np.array(wavenumbers)
 
-            print(f"loaded  file {i} of {len(files)}: {file}", flush=True)
+            print(f"loaded  file {i+1} of {len(files)}: {file}", flush=True)
             all_images.append(img)
             all_wavenumbers.append(wavenumbers)
     else:

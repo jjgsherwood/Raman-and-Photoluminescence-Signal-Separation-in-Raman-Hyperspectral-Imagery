@@ -4,6 +4,7 @@ import sys
 import glob
 from multiprocessing import Pool
 from multiprocessing import Process as multiprocess
+from collections import defaultdict
 
 
 from PyQt5.QtCore import *

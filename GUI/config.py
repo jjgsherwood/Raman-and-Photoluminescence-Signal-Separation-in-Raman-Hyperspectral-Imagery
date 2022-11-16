@@ -22,4 +22,4 @@ DEFAULT_DIR = [dir+'//' for dir in glob.glob(__user_dir+'//*') if 'doc' in dir.l
 DEFAULT_SAVE_DIR = DEFAULT_DIR
 
 # this gives an extra dialog to check input variables
-SHOW_INPUT = False
+SHOW_INPUT = True

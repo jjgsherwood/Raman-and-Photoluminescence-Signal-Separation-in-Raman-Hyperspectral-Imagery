@@ -3,7 +3,7 @@ import copy
 
 from scipy.fft import dct
 from sklearn.decomposition import PCA
-from scipy import signal
+from scipy import signal, ndimage, interpolate
 
 import matplotlib.pyplot as plt
 plt.rcParams['figure.figsize'] = (20.0, 10.0)
@@ -23,7 +23,7 @@ STRING_TO_FUNCTION = {
 
 
 class RemoveNoiseFFTPCA():
-    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", Print=False):
+    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", gradient_width=3, spike_padding=5, max_spike_width=150, Print=False):
         """
         Method to remove noise from raw data or split data.
 
@@ -49,6 +49,13 @@ class RemoveNoiseFFTPCA():
         error_function: determines how the noise is calculated default is MAPE (mean absolute percentage error).
             RMSPE (root mean squared percentage error) can also be used
             or any other function defined by the user with parameters target and prediction.
+        gradient_width: The number of indices used to calculate the gradient.
+            A higher number results in smoother gradient that are less effected by noise.
+            A value of at least 2 is advised.
+        spike_padding: When a spikes left and right borders are determined this number of indices is added to both sides.
+            This is to compensate for the fact that the left and right borders are calculate at 5% of the maximum height instead of 0%.
+            The width is calcualte at 5% maximum height for the stability of the algorithm.
+        max_spike_width: The maximum width of a spike in wavenumbers calculate at FW5M which is the full width at 5 percent of the maximum height.
         """
         self.k = None
 
@@ -67,51 +74,80 @@ class RemoveNoiseFFTPCA():
         self.percentage_noise = percentage_noise
         self.error = STRING_TO_FUNCTION[error_function]
         self.Print = Print
+        self.gradient_width = gradient_width
+        self.spike_padding = spike_padding
+        self.max_spike_width = int(max_spike_width * len(wavenumbers) / (wavenumbers[-1] - wavenumbers[0]))
 
     def __LPF_auto__(self, x):
         # find spike that are to similar to a dirac delta function
-        i = 0
-        grad = np.abs(x[i,10:] - x[i,:-10])
-        std_grad = np.std(grad)
-        print(std_grad)
-        position, details = signal.find_peaks(x[i], rel_height=.99, prominence=std_grad*10, width=(None,150))
-
-        print(details)
-        p = position[0]
-        half_w = int(details['widths']//2)
-        base = np.linspace(x[i,p-half_w],x[i,p+half_w],half_w*2+1)
         spike = np.zeros(x.shape)
-        spike[i,p-half_w : p+half_w+1] = x[i,p-half_w : p+half_w+1] - base
+        if not self.gradient_width is None:
+            grad = np.abs(x[:,self.gradient_width:] - x[:,:-self.gradient_width])
+            std_grad = np.std(grad, 1)
+            for i in range(x.shape[0]):
+                position, details = signal.find_peaks(x[i], rel_height=.95, prominence=std_grad[i]*3, width=(None,self.max_spike_width))
 
-        plt.plot(x[0])
-        plt.plot(spike[0])
-        plt.axvline(position[0], color='k', alpha=0.5)
-        plt.plot(x[0]-spike[0])
+                for j,p in enumerate(position):
+                    half_w = int(details['widths'][j]//2+self.spike_padding)
+                    left, right = max(0, p-half_w), min(p+half_w, x.shape[1]-1)
+                    base = np.linspace(x[i,left], x[i,right], right-left+1)
+                    spike[i,left:right+1] = x[i,left:right+1] - base
 
+        # LPF
         cosine = dct(x-spike, type=2, norm='backward')
         cosine = cosine.T
         cosine[self.k:] = np.mean(cosine[self.k:], 0)
-        """
-        TODO correct for dirac delta functions
-        """
-        tmp = dct(cosine.T, type=3, norm="forward")+spike
-        plt.plot(tmp[0])
-        plt.show()
 
-        plt.plot(cosine[:,0])
-        cosine = dct(x, type=2, norm='backward')
-        plt.plot(cosine[0])
-        cosine = dct(spike, type=2, norm='backward')
-        plt.plot(cosine[0])
-        plt.show()
+        return dct(cosine.T, type=3, norm="forward")+spike
 
-        return tmp
+    # def __LPF_auto__(self, x):
+    #     # find spike that are to similar to a dirac delta function
+    #     i = 85
+    #     w = 10
+    #     grad = np.abs(x[:,w:] - x[:,:-w])
+    #     std_grad = np.std(grad, 1)
+    #     plt.plot(grad[i])
+    #     print(std_grad[i])
+    #     plt.show()
+    #
+    #     position, details = signal.find_peaks(x[i], rel_height=.95, prominence=std_grad[i]*3, width=(None,250))
+    #
+    #     print(details)
+    #     spike = np.zeros(x.shape)
+    #     for j,p in enumerate(position):
+    #         half_w = int(details['widths'][j]//2+5)
+    #         base = np.linspace(x[i,p-half_w],x[i,p+half_w],half_w*2+1)
+    #         spike[i,p-half_w : p+half_w+1] = x[i,p-half_w : p+half_w+1] - base
+    #         plt.axvline(p, color='k', alpha=0.5)
+    #
+    #     plt.plot(x[i])
+    #     plt.plot(spike[i])
+    #     plt.plot(x[i]-spike[i])
+    #
+    #     cosine = dct(x-spike, type=2, norm='backward')
+    #     cosine = cosine.T
+    #     cosine[self.k:] = np.mean(cosine[self.k:], 0)
+    #     """
+    #     TODO correct for dirac delta functions
+    #     """
+    #     tmp = dct(cosine.T, type=3, norm="forward")+spike
+    #     # plt.plot(tmp[i])
+    #     plt.show()
+    #
+    #     plt.plot(cosine[:,i])
+    #     cosine = dct(x, type=2, norm='backward')
+    #     plt.plot(cosine[i], alpha=0.3)
+    #     cosine = dct(spike, type=2, norm='backward')
+    #     plt.plot(cosine[i])
+    #     plt.show()
+    #
+    #     return tmp
 
-    def __LPF_auto__(self, x):
-        cosine = dct(x, type=2, norm='backward')
-        cosine = cosine.T
-        cosine[self.k:] = np.mean(cosine[self.k:], 0)
-        return dct(cosine.T, type=3, norm="forward")
+    # def __LPF_auto__(self, x):
+    #     cosine = dct(x, type=2, norm='backward')
+    #     cosine = cosine.T
+    #     cosine[self.k:] = np.mean(cosine[self.k:], 0)
+    #     return dct(cosine.T, type=3, norm="forward")
 
     def __LPF_manual__(self, x):
         percentage_noise = self.percentage_noise if self.percentage_noise is not None else self.auto_percentage_noise

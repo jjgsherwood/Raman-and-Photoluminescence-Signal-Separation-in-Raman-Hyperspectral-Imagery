@@ -68,6 +68,43 @@ class MainWindow(QWidget):
         self.buttonPanel = self.addButtonPanel()
         self.vlayout.addWidget(self.buttonPanel)
 
+    def makeNoiseGibbsPanel(self):
+        self.noise_gibbs_checkbox = QGroupBox("Adjust for gibbs phenomena/dirac delta spikes section")
+        self.noise_gibbs_checkbox.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        self.noise_gibbs_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.noise_gibbs_checkbox.setLayout(grid)
+
+        width = 70
+        self.noise_gradient_width = QSpinBox()
+        self.noise_gradient_width.setRange(1,100)
+        self.noise_gradient_width.setValue(3)
+        self.noise_gradient_width.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.noise_gradient_width, QStyle.SP_MessageBoxInformation,icontext="The number of indices used to calculate the gradient.\nA higher number results in smoother gradient that are less effected by noise.\nA value of at least 2 is advised.")
+        text = QLabel("Gradient width")
+        grid.addWidget(text, 0, 0)
+        grid.addLayout(spinboxlayout, 0, 1)
+
+        self.noise_spike_padding = QSpinBox()
+        self.noise_spike_padding.setRange(0,50)
+        self.noise_spike_padding.setValue(5)
+        self.noise_spike_padding.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.noise_spike_padding, QStyle.SP_MessageBoxInformation,icontext="When a spikes left and right borders are determined this number of indices is added to both sides.\nThis is to compensate for the fact that the left and right borders are calculate at 5% of the maximum height instead of 0%.\nThe width is calcualte at 5% maximum height for the stability of the algorithm.")
+        text = QLabel("Spike padding")
+        grid.addWidget(text, 1, 0)
+        grid.addLayout(spinboxlayout, 1, 1)
+
+        self.noise_max_spike_width = QDoubleSpinBox()
+        self.noise_max_spike_width.setRange(1,500)
+        self.noise_spike_padding.setValue(150)
+        self.noise_max_spike_width.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.noise_max_spike_width, QStyle.SP_MessageBoxInformation,icontext="The maximum width of a spike in wavenumbers calculate at FW5M which is the full width at 5 percent of the maximum height.")
+        text = QLabel("Max spike width")
+        grid.addWidget(text, 2, 0)
+        grid.addLayout(spinboxlayout, 2, 1)
+
+        return self.noise_gibbs_checkbox
+
     def makeNoiseRemovalPanel(self):
         self.noise_removal_checkbox = QGroupBox("Noise removal section")
         self.noise_removal_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -138,6 +175,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         self.percentage_noise.setEnabled(False)
         spinboxlayout = Widget.AddIconToWidget(self.percentage_noise, QStyle.SP_MessageBoxInformation,icontext="This determines the percentage noise in each sample.\nThe noise removal alogirithm will keep removing noise till this percentage is reached.\nExcept when choosing PCA_LPF, see removal algorithm for more information.")
         grid.addLayout(spinboxlayout, 3, 1)
+
+        panel = self.makeNoiseGibbsPanel()
+        grid.addWidget(panel, 4, 0, 1, 2)
 
         return self.noise_removal_checkbox
 
@@ -460,7 +500,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         """
         check and get the values for the noise removal step.
         """
-        noise_removal_variables = {}
+        noise_removal_variables = defaultdict(int)
         if not self.noise_removal_checkbox.isChecked():
             return noise_removal_variables
 
@@ -473,7 +513,14 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         else:
             noise_removal_variables["noise_percenteage"] = self.percentage_noise.value()
             noise_removal_variables["noise_automated_FWHM"] = None
-            
+
+        if self.noise_gibbs_checkbox.isChecked():
+            noise_removal_variables["noise_gradient_width"] = self.noise_gradient_width.value()
+            noise_removal_variables["noise_spike_padding"] = self.noise_spike_padding.value()
+            noise_removal_variables["noise_max_spike_width"] = self.noise_max_spike_width.value()
+        else:
+            noise_removal_variables["noise_gradient_width"] = None
+
         return noise_removal_variables
 
     def __get_preprocessing_variables(self):
