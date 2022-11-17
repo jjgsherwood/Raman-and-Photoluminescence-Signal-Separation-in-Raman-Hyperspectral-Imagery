@@ -75,7 +75,7 @@ class MainWindow(QWidget):
         grid = QGridLayout()
         self.noise_gibbs_checkbox.setLayout(grid)
 
-        width = 75
+        width = 80
         self.noise_gradient_width = QSpinBox()
         self.noise_gradient_width.setRange(1,100)
         self.noise_gradient_width.setValue(3)
@@ -106,12 +106,12 @@ class MainWindow(QWidget):
         return self.noise_gibbs_checkbox
 
     def makeNoiseRemovalPanel(self):
+        width = 90
         self.noise_removal_checkbox = QGroupBox("Noise removal section")
         self.noise_removal_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.noise_removal_checkbox.setCheckable(True)
         grid = QGridLayout()
         self.noise_removal_checkbox.setLayout(grid)
-
 
         self.noise_removal_algorithm = QComboBox()
         self.noise_removal_algorithm.addItem('LPF')
@@ -119,6 +119,7 @@ class MainWindow(QWidget):
         self.noise_removal_algorithm.addItem('PCA')
         self.noise_removal_algorithm.addItem('PCA_LPF')
         self.noise_removal_algorithm.setCurrentIndex(3)
+        self.noise_removal_algorithm.setMinimumWidth(width)
         comboBoxlayout = Widget.AddIconToWidget(self.noise_removal_algorithm, QStyle.SP_MessageBoxInformation, icontext=
 """PCA: Only use PCA to reduce noise in the signal. Noise can be automatically be determined or specified.
 LPF: Only uses a low pass filter to reduce noise in the signal.
@@ -140,6 +141,7 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
         self.noise_error_algorithm = QComboBox()
         self.noise_error_algorithm.addItem('MAPE')
         self.noise_error_algorithm.addItem('RMSPE')
+        self.noise_error_algorithm.setMinimumWidth(width)
         comboBoxlayout = Widget.AddIconToWidget(self.noise_error_algorithm, QStyle.SP_MessageBoxInformation, icontext="This determines how the noise is calculated default is MAPE (mean absolute percentage error).\nThe other option is RMSPE (root mean squared percentage error).")
         text = QLabel("Calculating noise percentage algorithm")
         grid.addWidget(text, 1, 0)
@@ -156,7 +158,6 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
         radiobutton.toggled.connect(self.onChangeAutoNoise)
         grid.addWidget(radiobutton, 3, 0)
 
-        width = 65
         self.automated_FWHM = QDoubleSpinBox()
         self.automated_FWHM.setRange(0.0,30.0)
         self.automated_FWHM.setValue(3.0)

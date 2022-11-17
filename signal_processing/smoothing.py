@@ -5,10 +5,6 @@ from scipy.fft import dct
 from sklearn.decomposition import PCA
 from scipy import signal, ndimage, interpolate
 
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (20.0, 10.0)
-plt.rcParams['figure.dpi'] = 500
-
 
 def MAPE(x, y):
     return np.mean(np.abs(1 - y/x))
@@ -99,50 +95,7 @@ class RemoveNoiseFFTPCA():
         cosine[self.k:] = np.mean(cosine[self.k:], 0)
 
         return dct(cosine.T, type=3, norm="forward")+spike
-
-    # def __LPF_auto__(self, x):
-    #     # find spike that are to similar to a dirac delta function
-    #     i = 85
-    #     w = 10
-    #     grad = np.abs(x[:,w:] - x[:,:-w])
-    #     std_grad = np.std(grad, 1)
-    #     plt.plot(grad[i])
-    #     print(std_grad[i])
-    #     plt.show()
-    #
-    #     position, details = signal.find_peaks(x[i], rel_height=.95, prominence=std_grad[i]*3, width=(None,250))
-    #
-    #     print(details)
-    #     spike = np.zeros(x.shape)
-    #     for j,p in enumerate(position):
-    #         half_w = int(details['widths'][j]//2+5)
-    #         base = np.linspace(x[i,p-half_w],x[i,p+half_w],half_w*2+1)
-    #         spike[i,p-half_w : p+half_w+1] = x[i,p-half_w : p+half_w+1] - base
-    #         plt.axvline(p, color='k', alpha=0.5)
-    #
-    #     plt.plot(x[i], linewidth=2)
-    #     plt.plot(spike[i], alpha=0.6, linewidth=1)
-    #     plt.plot(x[i]-spike[i], linewidth=0.3, color='r')
-    #
-    #     cosine = dct(x-spike, type=2, norm='backward')
-    #     cosine = cosine.T
-    #     cosine[self.k:] = np.mean(cosine[self.k:], 0)
-    #     """
-    #     TODO correct for dirac delta functions
-    #     """
-    #     tmp = dct(cosine.T, type=3, norm="forward")+spike
-    #     # plt.plot(tmp[i])
-    #     plt.show()
-    #
-    #     plt.plot(cosine[:,i])
-    #     cosine = dct(x, type=2, norm='backward')
-    #     plt.plot(cosine[i], alpha=0.3)
-    #     cosine = dct(spike, type=2, norm='backward')
-    #     plt.plot(cosine[i])
-    #     plt.show()
-    #
-    #     return tmp
-
+        
     def __LPF_manual__(self, x):
         percentage_noise = self.percentage_noise if self.percentage_noise is not None else self.auto_percentage_noise
         left, right = 1, x.shape[-1]
