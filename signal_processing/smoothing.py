@@ -3,8 +3,11 @@ import copy
 
 from scipy.fft import dct
 from sklearn.decomposition import PCA
-from scipy import signal, ndimage, interpolate
+from scipy import signal
 
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 500
 
 def MAPE(x, y):
     return np.mean(np.abs(1 - y/x))
@@ -49,9 +52,9 @@ class RemoveNoiseFFTPCA():
             A higher number results in smoother gradient that are less effected by noise.
             A value of at least 2 is advised.
         spike_padding: When a spikes left and right borders are determined this number of indices is added to both sides.
-            This is to compensate for the fact that the left and right borders are calculate at 5% of the maximum height instead of 0%.
+            This is to compensate for the fact that the left and right borders are calculate at 30% of the maximum height instead of 0%.
             The width is calcualte at 5% maximum height for the stability of the algorithm.
-        max_spike_width: The maximum width of a spike in wavenumbers calculate at FW5M which is the full width at 5 percent of the maximum height.
+        max_spike_width: The maximum width of a spike in wavenumbers calculate at FW30M which is the full width at 30 percent of the maximum height.
         """
         self.k = None
 
@@ -81,8 +84,9 @@ class RemoveNoiseFFTPCA():
             grad = np.abs(x[:,self.gradient_width:] - x[:,:-self.gradient_width])
             std_grad = np.std(grad, 1)
             for i in range(x.shape[0]):
-                position, details = signal.find_peaks(x[i], rel_height=.95, prominence=std_grad[i]*3, width=(None,self.max_spike_width))
-
+                position, details = signal.find_peaks(x[i], rel_height=.7, prominence=std_grad[i]*3, width=(None,self.max_spike_width))
+                if i == 0:
+                    print(i, position)
                 for j,p in enumerate(position):
                     half_w = int(details['widths'][j]//2+self.spike_padding)
                     left, right = max(0, p-half_w), min(p+half_w, x.shape[1]-1)
@@ -95,7 +99,7 @@ class RemoveNoiseFFTPCA():
         cosine[self.k:] = np.mean(cosine[self.k:], 0)
 
         return dct(cosine.T, type=3, norm="forward")+spike
-        
+
     def __LPF_manual__(self, x):
         percentage_noise = self.percentage_noise if self.percentage_noise is not None else self.auto_percentage_noise
         left, right = 1, x.shape[-1]
