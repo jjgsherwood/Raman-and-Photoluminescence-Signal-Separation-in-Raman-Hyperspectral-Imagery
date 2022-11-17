@@ -120,9 +120,9 @@ class RemoveNoiseFFTPCA():
     #         spike[i,p-half_w : p+half_w+1] = x[i,p-half_w : p+half_w+1] - base
     #         plt.axvline(p, color='k', alpha=0.5)
     #
-    #     plt.plot(x[i])
-    #     plt.plot(spike[i])
-    #     plt.plot(x[i]-spike[i])
+    #     plt.plot(x[i], linewidth=2)
+    #     plt.plot(spike[i], alpha=0.6, linewidth=1)
+    #     plt.plot(x[i]-spike[i], linewidth=0.3, color='r')
     #
     #     cosine = dct(x-spike, type=2, norm='backward')
     #     cosine = cosine.T
@@ -142,12 +142,6 @@ class RemoveNoiseFFTPCA():
     #     plt.show()
     #
     #     return tmp
-
-    # def __LPF_auto__(self, x):
-    #     cosine = dct(x, type=2, norm='backward')
-    #     cosine = cosine.T
-    #     cosine[self.k:] = np.mean(cosine[self.k:], 0)
-    #     return dct(cosine.T, type=3, norm="forward")
 
     def __LPF_manual__(self, x):
         percentage_noise = self.percentage_noise if self.percentage_noise is not None else self.auto_percentage_noise

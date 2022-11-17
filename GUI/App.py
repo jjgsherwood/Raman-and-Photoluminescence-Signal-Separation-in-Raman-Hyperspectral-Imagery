@@ -75,7 +75,7 @@ class MainWindow(QWidget):
         grid = QGridLayout()
         self.noise_gibbs_checkbox.setLayout(grid)
 
-        width = 70
+        width = 75
         self.noise_gradient_width = QSpinBox()
         self.noise_gradient_width.setRange(1,100)
         self.noise_gradient_width.setValue(3)
@@ -96,7 +96,7 @@ class MainWindow(QWidget):
 
         self.noise_max_spike_width = QDoubleSpinBox()
         self.noise_max_spike_width.setRange(1,500)
-        self.noise_spike_padding.setValue(150)
+        self.noise_max_spike_width.setValue(150)
         self.noise_max_spike_width.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.noise_max_spike_width, QStyle.SP_MessageBoxInformation,icontext="The maximum width of a spike in wavenumbers calculate at FW5M which is the full width at 5 percent of the maximum height.")
         text = QLabel("Max spike width")
