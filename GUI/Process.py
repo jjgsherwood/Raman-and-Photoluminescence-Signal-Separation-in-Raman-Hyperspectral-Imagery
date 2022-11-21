@@ -18,7 +18,8 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
 
-    data = remove_noise(data, wavenumbers, noise_removal_variables)
+    if noise_removal_variables:
+        data = remove_noise(data, wavenumbers, noise_removal_variables)
 
     save_data(data, wavenumbers, filenames, save_variables)
     print("save complete", flush=True)
@@ -122,7 +123,6 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
                 preprocessing_variables['max_oc'],
                 preprocessing_variables['interpolate_degree']]
 
-        print(wavenumbers.shape)
         if len(wavenumbers.shape) == 1:
             cosmicray_removal = CosmicrayCorrection.remove_cosmicrays(wavenumbers, *args)
             for i, img in enumerate(data):

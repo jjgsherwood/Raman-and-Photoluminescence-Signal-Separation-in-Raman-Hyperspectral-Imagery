@@ -5,21 +5,11 @@ from scipy.fft import dct
 from sklearn.decomposition import PCA
 from scipy import signal
 
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (20.0, 10.0)
-plt.rcParams['figure.dpi'] = 500
+from signal_processing import error
 
-def MAPE(x, y):
-    return np.mean(np.abs(1 - y/x))
-
-def RMSPE(x, y):
-    return np.mean(np.sqrt(np.mean((1 - y/x)**2, 1)))
-
-STRING_TO_FUNCTION = {
-    "MAPE": MAPE,
-    "RMSPE": RMSPE
-}
-
+# import matplotlib.pyplot as plt
+# plt.rcParams['figure.figsize'] = (20.0, 10.0)
+# plt.rcParams['figure.dpi'] = 500
 
 class RemoveNoiseFFTPCA():
     def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", gradient_width=3, spike_padding=5, max_spike_width=150, Print=False):
@@ -71,7 +61,7 @@ class RemoveNoiseFFTPCA():
 
         self.algorithm = algorithm
         self.percentage_noise = percentage_noise
-        self.error = STRING_TO_FUNCTION[error_function]
+        self.error = error.STRING_TO_FUNCTION[error_function]
         self.Print = Print
         self.gradient_width = gradient_width
         self.spike_padding = spike_padding
@@ -85,8 +75,6 @@ class RemoveNoiseFFTPCA():
             std_grad = np.std(grad, 1)
             for i in range(x.shape[0]):
                 position, details = signal.find_peaks(x[i], rel_height=.7, prominence=std_grad[i]*3, width=(None,self.max_spike_width))
-                if i == 0:
-                    print(i, position)
                 for j,p in enumerate(position):
                     half_w = int(details['widths'][j]//2+self.spike_padding)
                     left, right = max(0, p-half_w), min(p+half_w, x.shape[1]-1)

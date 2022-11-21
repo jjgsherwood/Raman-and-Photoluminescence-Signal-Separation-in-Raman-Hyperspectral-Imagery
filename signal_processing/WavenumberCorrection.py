@@ -3,6 +3,7 @@ import numpy as np
 from math import ceil
 from multiprocessing import Pool
 
+
 def interpolate_image(args):
     w, img, new_wavenumbers = args
     new_data = np.empty((*img.shape[:2], len(new_wavenumbers)))
