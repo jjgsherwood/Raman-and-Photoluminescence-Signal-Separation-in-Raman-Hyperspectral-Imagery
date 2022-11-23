@@ -33,10 +33,12 @@ class photo_approximation():
             x = np.log(x)
 
         if w is not None:
-            p, *_ = np.linalg.lstsq(w @ self.kernel, w @ x, rcond=None)
+            kw = np.multiply(self.kernel, w[:,np.newaxis])
+            xw = np.multiply(x, w[np.newaxis,:]).T
+            p, *_ = np.linalg.lstsq(kw, xw, rcond=None)
         else:
-            p, *_ = np.linalg.lstsq(self.kernel, x, rcond=None)
+            p, *_ = np.linalg.lstsq(self.kernel, x.T, rcond=None)
 
         if self.log:
-            return np.exp(np.sum(self.kernel * p, 1))
-        return np.sum(self.kernel * p, 1)
+            return np.exp(self.kernel @ p).T
+        return (self.kernel @ p).T
