@@ -73,7 +73,7 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="10.6f")
         else:
             for name, img, w in zip(filenames, data, wavenumbers):
                 textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
@@ -82,7 +82,7 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="10.6f")
 
     if save_variables["save_as_numpy"]:
         # save wavenumbers
