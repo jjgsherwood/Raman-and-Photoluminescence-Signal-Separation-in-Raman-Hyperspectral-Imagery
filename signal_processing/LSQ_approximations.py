@@ -10,21 +10,21 @@ def gaussian(x, mu, sigma):
     return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
 
 class photo_approximation():
-    def __init__(self, wavenumbers, order=1, FWHM=500, size=1300, log=True):
+    def __init__(self, wavenumbers=None, order=1, FWHM=500, size=1300, log=True):
         self.log = log
-        # transform FWHM to guassian sigma and put the wavenumbers between 0 and 1
-        # see https://mathworld.wolfram.com/GaussianFunction.html
-        sigma = FWHM / (wavenumbers[-1] - wavenumbers[0]) / (2 * np.sqrt(2 * np.log(2)))
-        sigma = np.array([sigma])
-        width_between_max = (2 * np.sqrt(2 * np.log(100/99))) * sigma[0]
-        mu = np.linspace(0,1,int(1/width_between_max)+1)
-
         order = np.arange(order+1)
         space = np.linspace(0,1,size)
         self.M = space[:, np.newaxis]**order
-        if mu is None or sigma is None:
+        if FWHM is None or wavenumbers is None:
             self.kernel = self.M
         else:
+            # transform FWHM to guassian sigma and put the wavenumbers between 0 and 1
+            # see https://mathworld.wolfram.com/GaussianFunction.html
+            sigma = FWHM / (wavenumbers[-1] - wavenumbers[0]) / (2 * np.sqrt(2 * np.log(2)))
+            sigma = np.array([sigma])
+            width_between_max = (2 * np.sqrt(2 * np.log(100/99))) * sigma[0]
+            mu = np.linspace(0,1,int(1/width_between_max)+1)
+
             self.RBF = gaussian(space, mu, sigma)
             self.kernel = np.concatenate((self.M, self.RBF), 1)
 

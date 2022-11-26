@@ -376,7 +376,10 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
     def addProcessMethodPanel(self):
         """ Which noise filter to use. Which grad approximation to use. Other setting such as: Photo width (FWHM)"""
-        pass
+        """
+        Variable are: wavenumbers, order=9, FWHM=2000, size=1300, convergence=5e-3
+                      wavenumbers, convergence=1e-3, intervals=50, segment_width=400, order=9, FWHM=2000, size=1300, algorithm="Bezier"
+        """
 
     def addDisplayPanel(self):
         """ Checkboxes to say whether intermediate results and/or end results should be displayed"""
