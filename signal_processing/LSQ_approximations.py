@@ -1,8 +1,8 @@
 import numpy as np
 
-# import matplotlib.pyplot as plt
-# plt.rcParams['figure.figsize'] = (20.0, 10.0)
-# plt.rcParams['figure.dpi'] = 500
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 500
 
 def gaussian(x, mu, sigma):
     x = x.reshape(-1,1)
@@ -22,7 +22,7 @@ class photo_approximation():
             # see https://mathworld.wolfram.com/GaussianFunction.html
             sigma = FWHM / (wavenumbers[-1] - wavenumbers[0]) / (2 * np.sqrt(2 * np.log(2)))
             sigma = np.array([sigma])
-            width_between_max = (2 * np.sqrt(2 * np.log(100/99))) * sigma[0]
+            width_between_max = (2 * np.sqrt(2 * np.log(100/80))) * sigma[0]
             mu = np.linspace(0,1,int(1/width_between_max)+1)
 
             self.RBF = gaussian(space, mu, sigma)

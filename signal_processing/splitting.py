@@ -5,8 +5,8 @@ from multiprocessing import Pool
 from signal_processing import error, LSQ_approximations as LSQ
 
 import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (20.0, 10.0)
-plt.rcParams['figure.dpi'] = 500
+plt.rcParams['figure.figsize'] = (40.0, 20.0)
+plt.rcParams['figure.dpi'] = 1000
 
 def Bezier_curve(p0,p1,p2):
     x0, x1, x2 = p0[0], p1[0], p2[0]
@@ -25,49 +25,31 @@ def Bezier_curve(p0,p1,p2):
     return B, inv_B
 
 class preliminary_split():
-    def __init__(self, wavenumbers, order=9, FWHM=2000, size=1300, convergence=5e-3):
+    def __init__(self, wavenumbers, order=1, FWHM=400, size=1300, convergence=5e-3):
         self.preliminary_photo_approximation = LSQ.photo_approximation(wavenumbers, order=order, FWHM=FWHM, size=size)
         self.convergence = convergence
 
     def __call__(self, img):
-        n = 0
-        plt.plot(img[n])
-
         img[img <= 0] = 1e-8
         target = copy.deepcopy(img)
         weights = np.ones(img.shape[-1])
 
-        i = 0
-        # mean_error = np.ones(1)
-        # while sum(mean_error > 0.1):
-        old = -1
         photo = target
-        while np.abs((new_old := error.MAPE(target, photo)) - old) > self.convergence:
-            old = new_old
-            photo = self.preliminary_photo_approximation(target, weights)
+        photo_old = -1
+        while error.MAPE(photo_old, photo) > self.convergence:
+            photo, photo_old = self.preliminary_photo_approximation(target, weights), photo
             to_high = photo > img
             mean_error = np.mean(to_high, 0)
             weights += mean_error
             weights /= np.mean(weights)
             target[to_high] *= 0.975
-            plt.plot(photo[n], label=i)
-            # plt.plot(target[n])
-            # plt.plot(weights)
-            plt.plot(np.mean(to_high, 0)*300)
-            i += 1
-        plt.legend()
-        plt.show()
-        print(i)
         return photo
 
-        # return self.preliminary_photo_approximation(img)
-
-
 class split():
-    def __init__(self, wavenumbers, convergence=1e-3, intervals=50, segment_width=400, order=9, FWHM=2000, size=1300, algorithm="LS2"):
+    def __init__(self, wavenumbers, convergence=1e-3, segment_width=400, order=1, FWHM=300, size=1300, algorithm="LS2"):
         self.photo_approximation = LSQ.photo_approximation(wavenumbers, order=order, FWHM=FWHM, size=size)
-        self.stepsize = int(size//intervals)
-        self.width = int(segment_width / (wavenumbers[-1] - wavenumbers[0]) * len(wavenumbers))
+        self.width = int(segment_width / (wavenumbers[-1] - wavenumbers[0]) * size)
+        self.stepsize = int(self.width // 10)
         self.size = size
         self.LS = LSQ.photo_approximation(order=2, size=self.width, log=False)
         self.convergence = convergence
@@ -144,51 +126,66 @@ class split():
 
     def __iteration(self, img, photo):
         grad = self.__grad(photo)
-
         half_width = int(self.width//2)
         poly_max = np.zeros(img.shape)
 
+        # n = 85
+        # plt.plot(img[n])
         # approximate left bounderie
         for right in range(self.stepsize, self.width, self.stepsize):
             left = max(0, right-half_width)
             new_segment = self.__approximate_gradient_bounderies(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
-
+            # plt.plot(range(left, right), new_segment[n])
         # approximate middle section
         for left in range(0, self.size-self.width, self.stepsize):
             right = left + self.width
             new_segment = self.__fit_gradient_line_segment(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
+            # plt.plot(range(left, right), new_segment[n])
 
         # approximate right bounderie
         for left in range(self.size-self.width, self.size-self.stepsize, self.stepsize):
             right = min(self.size, left+half_width)
             new_segment = self.__approximate_gradient_bounderies(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
+            # plt.plot(range(left, right), new_segment[n])
+
+        # plt.show()
 
         weights = np.ones(img.shape[-1])
-        old = -1
         poly_max[poly_max <= 0] = 1e-8
-        while np.abs((new_old := error.MAPE(poly_max, photo)) - old) > self.convergence:
-            old = new_old
-            photo = self.photo_approximation(poly_max, weights)
+        photo_old = -1
+        photo = poly_max
+        i = 0
+        alpha = 0.5
+        while (old:=error.MAPE(photo_old, photo)) > self.convergence:
+            # print("inner error",old, flush=True)
+            photo, photo_old =  (1-alpha) * photo + alpha * self.photo_approximation(poly_max, weights), photo
             to_high = photo > img
             mean_error = np.mean(to_high, 0)
             weights += mean_error
             weights /= np.mean(weights)
             poly_max[to_high] *= 0.975
+            i += 1
 
+        print("inner iterations", i, flush=True)
         return photo
 
-    def __call__(self, img, photo):
-        new_photo = photo
+    def __call__(self, img, new_photo):
+        new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
-        old = -1
-        while np.abs((new_old := error.MAPE(photo, new_photo)) - old) > self.convergence:
-            old = new_old
-            photo = new_photo
-            photo[photo <= 0] = 1e-8
-            new_photo = self.__iteration(img, photo)
+        alpha = 0.5
+        while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
+            # forget photo approximation
+            if i == 0:
+                photo = new_photo
+            # learning rate schedular
+            if i >= 5:
+                alpha *= 0.9
+            print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}")
+            new_photo[new_photo <= 0] = 1e-8
+            new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
             i += 1
-        print("iterations", i)
+        print("outer iterations", i, flush=True)
         return photo
