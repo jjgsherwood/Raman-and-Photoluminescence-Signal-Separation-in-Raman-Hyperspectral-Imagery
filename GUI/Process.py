@@ -9,7 +9,7 @@ from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
@@ -20,12 +20,12 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables)
+            save_data(data, wavenumbers, filenames, save_variables, text)
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables)
+            save_data(data, wavenumbers, filenames, save_variables, text)
 
     if splitting_variables:
         if splitting_variables["approximate_photo"]:
@@ -36,12 +36,12 @@ def run(args):
         raman = data - photo
 
     if photo is None:
-        save_data(data, wavenumbers, filenames, save_variables)
+        save_data(data, wavenumbers, filenames, save_variables, text)
     else:
         filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
         filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
-        save_data(raman, wavenumbers, filenames_raman, save_variables)
-        save_data(photo, wavenumbers, filenames_photo, save_variables)
+        save_data(raman, wavenumbers, filenames_raman, save_variables, text)
+        save_data(photo, wavenumbers, filenames_photo, save_variables, text)
     print("save complete", flush=True)
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
@@ -133,45 +133,6 @@ def remove_noise(data, wavenumbers, noise_removal_variables):
 
     return data
 
-def save_data(data, wavenumbers, filenames, save_variables):
-    # save data in new folder
-    timestamp = str(datetime.datetime.now()).replace(":","-")
-    save_dir = save_variables["save_dir"] + '//' + timestamp + '//'
-    os.makedirs(save_dir, exist_ok=True)
-
-    if save_variables["save_as_txt"]:
-        if len(wavenumbers.shape) == 1:
-            w = wavenumbers
-            for name, img in zip(filenames, data):
-                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
-                textfile[0, 2:] = w
-                textfile[1:, 2:] = img.reshape(-1, len(w))
-                Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
-                textfile[1:, 0] = X.flatten()
-                textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
-        else:
-            for name, img, w in zip(filenames, data, wavenumbers):
-                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
-                textfile[0, 2:] = w
-                textfile[1:, 2:] = img.reshape(-1, len(w))
-                Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
-                textfile[1:, 0] = X.flatten()
-                textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
-
-    if save_variables["save_as_numpy"]:
-        # save wavenumbers
-        if len(wavenumbers.shape) == 1:
-            np.save(f'{save_dir}Wavenumbers', wavenumbers)
-        else:
-            for name, w in zip(filenames, wavenumbers):
-                np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}_Wavenumbers', w)
-
-        # save file
-        for name, img in zip(filenames, data):
-            np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}', img)
-
 def preprocessing(data, wavenumbers, preprocessing_variables):
     # check if same stepsize is enabled.
     if 'all_images_same_stepsize' in preprocessing_variables:
@@ -211,6 +172,48 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
                 print(f"correcting for cosmic ray noise done for image {i+1} out of {len(data)}", flush=True)
 
     return data, wavenumbers
+
+def save_data(data, wavenumbers, filenames, save_variables, text):
+    # save data in new folder
+    timestamp = str(datetime.datetime.now()).replace(":","-")
+    save_dir = save_variables["save_dir"] + '//' + timestamp + '//'
+    os.makedirs(save_dir, exist_ok=True)
+
+    with open(save_dir+"metadata.txt", "w") as f:
+        f.write(text)
+
+    if save_variables["save_as_txt"]:
+        if len(wavenumbers.shape) == 1:
+            w = wavenumbers
+            for name, img in zip(filenames, data):
+                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
+                textfile[0, 2:] = w
+                textfile[1:, 2:] = img.reshape(-1, len(w))
+                Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
+                textfile[1:, 0] = X.flatten()
+                textfile[1:, 1] = Y.flatten()
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
+        else:
+            for name, img, w in zip(filenames, data, wavenumbers):
+                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
+                textfile[0, 2:] = w
+                textfile[1:, 2:] = img.reshape(-1, len(w))
+                Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
+                textfile[1:, 0] = X.flatten()
+                textfile[1:, 1] = Y.flatten()
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
+
+    if save_variables["save_as_numpy"]:
+        # save wavenumbers
+        if len(wavenumbers.shape) == 1:
+            np.save(f'{save_dir}Wavenumbers', wavenumbers)
+        else:
+            for name, w in zip(filenames, wavenumbers):
+                np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}_Wavenumbers', w)
+
+        # save file
+        for name, img in zip(filenames, data):
+            np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}', img)
 
 def load_files(files, fast_loading):
     print(f"start loading data, number of files {len(files[0])}", flush=True)

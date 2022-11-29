@@ -638,18 +638,20 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         if (splitting_variables := self.__get_splitting_variables()) is None:
             return
 
+        text = "See selected preprocessing parameters below:\n\n"
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items()))
+        text += '\n\n'
+        text += "See selected noise removal parameters below:\n\n"
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in noise_removal_variables.items()))
+        text += '\n\n'
+        text += "See selected splitting parameters below:\n\n"
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in splitting_variables.items()))
+
         # show variables
         if SHOW_INPUT:
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Information)
-            text = "See selected preprocessing parameters below:\n\n"
-            text += '\n'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items()))
-            text += '\n\n'
-            text += "See selected noise removal parameters below:\n\n"
-            text += '\n'.join((str(k)+' : '+str(v) for k,v in noise_removal_variables.items()))
-            text += '\n\n'
-            text += "See selected splitting parameters below:\n\n"
-            text += '\n'.join((str(k)+' : '+str(v) for k,v in splitting_variables.items()))
+
             msg.setText(text)
             msg.setWindowTitle("Inspect given parameters")
             try:
@@ -671,7 +673,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
