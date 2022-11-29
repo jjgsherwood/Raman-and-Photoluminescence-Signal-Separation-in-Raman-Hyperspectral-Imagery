@@ -9,20 +9,96 @@ from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, variables = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
+    photo_approx = None
+    photo = None
 
     # check if preprocessing is enabled
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
+        if save_variables['save_intermediate_results']:
+            save_data(data, wavenumbers, filenames, save_variables)
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
+        if save_variables['save_intermediate_results']:
+            save_data(data, wavenumbers, filenames, save_variables)
 
-    save_data(data, wavenumbers, filenames, save_variables)
+    if splitting_variables:
+        if splitting_variables["approximate_photo"]:
+            photo_approx = approximated_splitting(data, wavenumbers, splitting_variables)
+            photo = splitting_data(data, photo_approx, wavenumbers, splitting_variables)
+        else:
+            photo = splitting_data(data, data, wavenumbers, splitting_variables)
+        raman = data - photo
+
+    if photo is None:
+        save_data(data, wavenumbers, filenames, save_variables)
+    else:
+        filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
+        filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
+        save_data(raman, wavenumbers, filenames_raman, save_variables)
+        save_data(photo, wavenumbers, filenames_photo, save_variables)
     print("save complete", flush=True)
+
+def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
+    photo = np.empty(data.shape)
+    if len(wavenumbers.shape) == 1:
+        split = splitting.split(
+            wavenumbers = wavenumbers,
+            size = data[0].shape[-1],
+            FWHM = splitting_variables["RBF_FWHM"],
+            order = splitting_variables["order"],
+            convergence = splitting_variables["convergence"],
+            segment_width = splitting_variables["segment_width"],
+            algorithm = splitting_variables["segment_fitting_algorithm"]
+        )
+        for i, img in enumerate(data):
+            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"split for image {i+1} out of {len(data)} done", flush=True)
+    else:
+        for i, img in enumerate(data):
+            split = splitting.split(
+                wavenumbers = wavenumbers[i],
+                size = data[0].shape[-1],
+                FWHM = splitting_variables["RBF_FWHM"],
+                order = splitting_variables["order"],
+                convergence = splitting_variables["convergence"],
+                segment_width = splitting_variables["segment_width"],
+                algorithm = splitting_variables["segment_fitting_algorithm"]
+            )
+            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"split for image {i+1} out of {len(data)} done", flush=True)
+    return photo
+
+def approximated_splitting(data, wavenumbers, splitting_variables):
+    photo_approx = np.empty(data.shape)
+    if len(wavenumbers.shape) == 1:
+        approximate_split = splitting.preliminary_split(
+            wavenumbers = wavenumbers,
+            convergence = splitting_variables["convergence_approximate"],
+            order = splitting_variables["order_approximate"],
+            FWHM = splitting_variables["RBF_FWHM_approximate"],
+            size = data[0].shape[-1]
+        )
+        for i, img in enumerate(data):
+            photo_approx[i] = approximate_split(img.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"approximated split for image {i+1} out of {len(data)} done", flush=True)
+    else:
+        for i, img in enumerate(data):
+            approximate_split = splitting.preliminary_split(
+                wavenumbers = wavenumbers[i],
+                convergence = splitting_variables["convergence_approximate"],
+                order = splitting_variables["order_approximate"],
+                FWHM = splitting_variables["RBF_FWHM_approximate"],
+                size = data[0].shape[-1]
+            )
+            photo_approx[i] = approximate_split(img.reshape(-1, img.shape[-1])).reshape(img.shape)
+            print(f"approximated split for image {i+1} out of {len(data)} done", flush=True)
+    return photo_approx
 
 def remove_noise(data, wavenumbers, noise_removal_variables):
     # check if each image has his own wavenumbers or if they are all equal.
@@ -73,7 +149,7 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="10.6f")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
         else:
             for name, img, w in zip(filenames, data, wavenumbers):
                 textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
@@ -82,14 +158,14 @@ def save_data(data, wavenumbers, filenames, save_variables):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="10.6f")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
 
     if save_variables["save_as_numpy"]:
         # save wavenumbers
         if len(wavenumbers.shape) == 1:
             np.save(f'{save_dir}Wavenumbers', wavenumbers)
         else:
-            for name, w in zip(wavenumbers, data):
+            for name, w in zip(filenames, wavenumbers):
                 np.save(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}_Wavenumbers', w)
 
         # save file

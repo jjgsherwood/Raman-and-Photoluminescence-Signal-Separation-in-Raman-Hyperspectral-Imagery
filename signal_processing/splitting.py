@@ -4,9 +4,9 @@ from multiprocessing import Pool
 
 from signal_processing import error, LSQ_approximations as LSQ
 
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (40.0, 20.0)
-plt.rcParams['figure.dpi'] = 1000
+# import matplotlib.pyplot as plt
+# plt.rcParams['figure.figsize'] = (40.0, 20.0)
+# plt.rcParams['figure.dpi'] = 1000
 
 def Bezier_curve(p0,p1,p2):
     x0, x1, x2 = p0[0], p1[0], p2[0]
@@ -18,7 +18,6 @@ def Bezier_curve(p0,p1,p2):
         return (b + np.sqrt(d + a * x)) / a
 
     p0, p1, p2 = p0[1], p1[1], p2[1]
-    # p1[:] = 0
     def B(t):
         return np.outer((1-t)**2,p0) + np.outer(2*(1-t)*t, p1) + np.outer(t**2, p2)
 
@@ -26,6 +25,23 @@ def Bezier_curve(p0,p1,p2):
 
 class preliminary_split():
     def __init__(self, wavenumbers, order=1, FWHM=400, size=1300, convergence=5e-3):
+        """
+        This will give a photoluminences approximation based on the raw signal.
+
+        The photoluminences approximation is calculated using an iterative algorithm.
+        Each iteration consists of a weighted least squared with target correction (WLST)
+        and an update of the weights and targets.
+
+        wavenumbers: Wavenumbers are needed to convert FWHM in wavenumbers of the radial basis function (RBF) to indices.
+        size: size is needed to convert FWHM in wavenumbers of the radial basis function (RBF) to indices.
+        FWHM: Determines the sigma of the RBF, this also effects the number of radial basis (gaussians)
+            because the distance between two means is determined based on the width of the gaussian at 80% height.
+        order: To fit the photoluminences signal better the kernel used in the least square algorithm includes an RBF kernel and a polynomial kernel.
+            This determines the order of the polynomial kernel.
+        convergence: convergence determines when the algorithm should stop.
+            The convergence is calculated using the mean average percentage error (MAPE) between the approximations of photoluminences at t and t-1.
+            So if convergence is set to 1e-3 than the algorithm stops if the difference between two approximation is less than 0.1 percent.
+        """
         self.preliminary_photo_approximation = LSQ.photo_approximation(wavenumbers, order=order, FWHM=FWHM, size=size)
         self.convergence = convergence
 
@@ -46,7 +62,37 @@ class preliminary_split():
         return photo
 
 class split():
-    def __init__(self, wavenumbers, convergence=1e-3, segment_width=400, order=1, FWHM=300, size=1300, algorithm="LS2"):
+    def __init__(self, wavenumbers, size=1300, FWHM=300, order=1, convergence=1e-3, segment_width=400, algorithm="Bezier curve"):
+        """
+        This will give the photoluminences signal based on either the raw signal or a photoluminences approximation.
+        When given an approximation the algorithm becomes much faster.
+
+        The photoluminences signal is calculated using two iterative algorithms, an inner and outer iterative algorithm.
+        The inner iterative algorithm consists of a weighted least squared with target correction (WLST) and an update of the weights and targets.
+        The outer iterative algorithm consists of a gradient based segment fit algorithm and the inner iterative algorithm.
+        The gradient based segment fit algorithm consists of two steps:
+            - First, a sliding window goes over the curve and for each segment the gradient is smoothed.
+              Here three option are available Linear, Quadratic, Bezier curve.
+            - Next, the new gradients segments are intergrated to get curve segments.
+            - Then, these curve segment are placed below the raw curve in a way that
+              both curves collide but not intersect each other.
+            - Last, the maximum is taking for each wavenumber over the curve segments that overlap.
+
+        wavenumbers: Wavenumbers are needed to convert FWHM in wavenumbers of the radial basis function (RBF) to indices.
+        size: size is needed to convert FWHM in wavenumbers of the radial basis function (RBF) to indices.
+        FWHM: Determines the sigma of the RBF, this also effects the number of radial basis (gaussians)
+            because the distance between two means is determined based on the width of the gaussian at 80% height.
+        order: To fit the photoluminences signal better the kernel used in the least square algorithm includes an RBF kernel and a polynomial kernel.
+            This determines the order of the polynomial kernel.
+        convergence: convergence determines when the algorithm should stop.
+            This effects the innerloop which converts the segments into a smooth curve and
+            the outerloop which determines when the final photoluminences signal is converged.
+            The convergence is calculated using the mean average percentage error (MAPE) between the approximations of photoluminences at iteration i and i-1.
+            So if convergence is set to 1e-3 than the algorithm stops if the difference between two approximation is less than 0.1 percent.
+        segment_width: This determines the segment width for the gradient based segment fit algorithm.
+        algorithm: This determines which gradient based segment fit algorithm is used.
+            There are three options: Linear, Quadratic, Bezier curve.
+        """
         self.photo_approximation = LSQ.photo_approximation(wavenumbers, order=order, FWHM=FWHM, size=size)
         self.width = int(segment_width / (wavenumbers[-1] - wavenumbers[0]) * size)
         self.stepsize = int(self.width // 10)
@@ -86,15 +132,18 @@ class split():
         )
 
     def __approximate_gradient_bezier(self, grad, left, middle, right):
-        p0 = np.array([left, grad[:,left]])
-        p1 = np.array([middle, grad[:,middle]])
-        p2 = np.array([right-1, grad[:,right-1]])
+        p0 = np.array([left, grad[:,left]], dtype=object)
+        p1 = np.array([middle, grad[:,middle]], dtype=object)
+        p2 = np.array([right-1, grad[:,right-1]], dtype=object)
 
         B, inv_B = Bezier_curve(p0, p1, p2)
         x_axis = np.arange(left, right)
         return B(inv_B(x_axis)).T
 
     def __approximate_gradient_LS(self, grad, left, middle, right):
+        """
+        Depricated Overfitting
+        """
         grad = grad[:,left], grad[:,middle], grad[:,right-1]
 
         axis = np.array([left, middle, right])
@@ -113,11 +162,9 @@ class split():
         middle = int((right + left) // 2)
         if self.algorithm == "Linear":
             grad = self.__approximate_gradient_linearly(grad, left, middle, right)
-        elif self.algorithm == "LS1":
+        elif self.algorithm == "Quadratic":
             grad = self.LS(grad[:,left:right])
-        elif self.algorithm == "LS2":
-            grad = self.__approximate_gradient_LS(grad, left, middle, right)
-        elif self.algorithm == "Bezier":
+        elif self.algorithm == "Bezier curve":
             grad = self.__approximate_gradient_bezier(grad, left, middle, right)
         else:
             raise ValueError("invalid algorithm for determining the new gradient!")
@@ -159,7 +206,7 @@ class split():
         photo = poly_max
         i = 0
         alpha = 0.5
-        while (old:=error.MAPE(photo_old, photo)) > self.convergence:
+        while (old:=error.MAPE(photo_old, photo)) > self.convergence or i < 5:
             # print("inner error",old, flush=True)
             photo, photo_old =  (1-alpha) * photo + alpha * self.photo_approximation(poly_max, weights), photo
             to_high = photo > img
@@ -181,9 +228,9 @@ class split():
             if i == 0:
                 photo = new_photo
             # learning rate schedular
-            if i >= 5:
+            if i >= 10:
                 alpha *= 0.9
-            print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}")
+            print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
             new_photo[new_photo <= 0] = 1e-8
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
             i += 1

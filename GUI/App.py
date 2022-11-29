@@ -50,6 +50,7 @@ class MainWindow(QWidget):
         self.fileSavePanel = self.makeFileSavePanel()
         self.preProcessMethodPanel = self.makePreProcessMethodPanel()
         self.noiseRemovalPanel = self.makeNoiseRemovalPanel()
+        self.makeSplittingPanel = self.makeSplittingPanel()
         self.fillPanel = QFrame()
 
         self.leftLayout.addWidget(self.fileBrowserPanel, 0, 0)
@@ -57,7 +58,8 @@ class MainWindow(QWidget):
         self.leftLayout.addWidget(self.preProcessMethodPanel, 2, 0)
 
         self.rightLayout.addWidget(self.noiseRemovalPanel, 1, 0)
-        self.rightLayout.addWidget(self.fillPanel, 2, 0)
+        self.rightLayout.addWidget(self.makeSplittingPanel, 2, 0)
+        self.rightLayout.addWidget(self.fillPanel, 6, 0)
 
         # join the columns into one panel
         self.gridlayout.addLayout(self.leftLayout)
@@ -67,6 +69,169 @@ class MainWindow(QWidget):
         self.vlayout.addWidget(self.panel)
         self.buttonPanel = self.addButtonPanel()
         self.vlayout.addWidget(self.buttonPanel)
+
+    def makeApproximatePanel(self):
+        """
+        wavenumbers, order=1, FWHM=400, size=1300, convergence=5e-3
+        convergence, order, FWHM, on/off
+        """
+        width = 105
+        split_width = (width - 25) // 2
+        self.approximate_checkbox = QGroupBox("pre-approximate photoluminences")
+        self.approximate_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.approximate_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.approximate_checkbox.setLayout(grid)
+
+        self.RBF_FWHM_aproximate = QSpinBox()
+        self.RBF_FWHM_aproximate.setRange(50,1000)
+        self.RBF_FWHM_aproximate.setValue(300)
+        self.RBF_FWHM_aproximate.setSingleStep(25)
+        self.RBF_FWHM_aproximate.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.RBF_FWHM_aproximate, QStyle.SP_MessageBoxInformation,icontext="""FWHM determines the sigma of the RBF, this also effects the number of radial basis (gaussians)\nbecause the distance between two means is determined based on the width of the gaussian at 80% height..""")
+        text = QLabel("RBF FWHM")
+        grid.addWidget(text, 0, 0)
+        grid.addLayout(spinboxlayout, 0, 1)
+
+        self.order_aproximate = QSpinBox()
+        self.order_aproximate.setRange(0,20)
+        self.order_aproximate.setValue(1)
+        self.order_aproximate.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.order_aproximate, QStyle.SP_MessageBoxInformation,icontext="""To fit the photoluminences signal better the kernel used in the least square algorithm includes an RBF kernel and a polynomial kernel.\nThis determines the order of the polynomial kernel.""")
+        text = QLabel("Polynomial order")
+        grid.addWidget(text, 1, 0)
+        grid.addLayout(spinboxlayout, 1, 1)
+
+        # self.splitting_convergence1.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        hlayout = QHBoxLayout()
+        self.approximation_convergence1 = QSpinBox()
+        self.approximation_convergence1.setRange(1,9)
+        self.approximation_convergence1.setValue(1)
+        self.approximation_convergence1.setMinimumWidth(split_width)
+        text = QLabel("e-")
+        self.approximation_convergence2 = QSpinBox()
+        self.approximation_convergence2.setRange(2,9)
+        self.approximation_convergence2.setValue(3)
+        self.approximation_convergence2.setMinimumWidth(split_width)
+        hlayout.addWidget(self.approximation_convergence1)
+        hlayout.addWidget(text)
+        hlayout.addWidget(self.approximation_convergence2)
+        spinboxlayout = Widget.AddIconToWidget(hlayout, QStyle.SP_MessageBoxInformation,addwidget=False, icontext=
+"""convergence: convergence determines when the algorithm should stop.
+The convergence is calculated using the mean average percentage error (MAPE) between the approximations of photoluminences at t and t-1.
+So if convergence is set to 1e-3 than the algorithm stops if the difference between two approximation is less than 0.1 percent.""")
+        grid.addLayout(spinboxlayout, 2, 1)
+        text = QLabel("Convergence")
+        grid.addWidget(text, 2, 0)
+
+        return self.approximate_checkbox
+
+    def makeSplittingPanel(self):
+        """
+        wavenumbers, order=1, FWHM=400, size=1300, convergence=5e-3
+        wavenumbers, convergence=1e-3, segment_width=400, order=1, FWHM=300, size=1300, algorithm="LS2"
+
+        wavenumbers, convergence, size, segment_width, order, FWHM, algorithm
+        main:
+        algorithm, segment_width, FWHM, order, convergence
+        approx:
+        convergence, order, FWHM, on/off
+        """
+        width = 115
+        split_width = (width - 25) // 2
+        self.splitting_checkbox = QGroupBox("Splitting section")
+        self.splitting_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.splitting_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.splitting_checkbox.setLayout(grid)
+
+        text = QLabel("Info")
+        comboBoxlayout = Widget.AddIconToWidget(text, QStyle.SP_MessageBoxInformation, icontext=
+"""This will give the photoluminences signal based on either the raw signal or a photoluminences approximation.
+When given an approximation the algorithm becomes much faster.
+
+The photoluminences signal is calculated using two iterative algorithms, an inner and outer iterative algorithm.
+The inner iterative algorithm consists of a weighted least squared with target correction (WLST) and an update of the weights and targets.
+The outer iterative algorithm consists of a gradient based segment fit algorithm and the inner iterative algorithm.
+The gradient based segment fit algorithm consists of two steps:
+    - First, a sliding window goes over the curve and for each segment the gradient is smoothed.
+      Here three option are available Linear, Quadratic, Bezier curve.
+    - Next, the new gradients segments are intergrated to get curve segments.
+    - Then, these curve segment are placed below the raw curve in a way that
+      both curves collide but not intersect each other.
+    - Last, the maximum is taking for each wavenumber over the curve segments that overlap.
+
+For more info, see Thesis.""")
+        grid.addLayout(comboBoxlayout, 0, 0)
+        comboBoxlayout.addStretch()
+
+        self.segment_fitting_algorithm = QComboBox()
+        self.segment_fitting_algorithm.addItem('Linear')
+        self.segment_fitting_algorithm.addItem('Quadratic')
+        self.segment_fitting_algorithm.addItem('Bezier curve')
+        self.segment_fitting_algorithm.setCurrentIndex(2)
+        self.segment_fitting_algorithm.setMinimumWidth(width)
+        comboBoxlayout = Widget.AddIconToWidget(self.segment_fitting_algorithm, QStyle.SP_MessageBoxInformation, icontext="""This determines which gradient based segment fit algorithm is used.\nThere are three options: Linear, Quadratic, Bezier curve.""")
+        text = QLabel("Gradient based segment fit algorithm")
+        grid.addWidget(text, 1, 0)
+        grid.addLayout(comboBoxlayout, 1, 1)
+
+        self.segment_width = QSpinBox()
+        self.segment_width.setRange(50,1000)
+        self.segment_width.setValue(400)
+        self.segment_width.setSingleStep(25)
+        self.segment_width.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.segment_width, QStyle.SP_MessageBoxInformation,icontext="""This determines the segment width for the gradient based segment fit algorithm.\nThis is given in wavenumbers.""")
+        text = QLabel("Segment width")
+        grid.addWidget(text, 2, 0)
+        grid.addLayout(spinboxlayout, 2, 1)
+
+        self.RBF_FWHM = QSpinBox()
+        self.RBF_FWHM.setRange(50,1000)
+        self.RBF_FWHM.setValue(300)
+        self.RBF_FWHM.setSingleStep(25)
+        self.RBF_FWHM.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.RBF_FWHM, QStyle.SP_MessageBoxInformation,icontext="""FWHM determines the sigma of the RBF, this also effects the number of radial basis (gaussians)\nbecause the distance between two means is determined based on the width of the gaussian at 80% height.""")
+        text = QLabel("RBF FWHM")
+        grid.addWidget(text, 3, 0)
+        grid.addLayout(spinboxlayout, 3, 1)
+
+        self.order = QSpinBox()
+        self.order.setRange(0,20)
+        self.order.setValue(1)
+        self.order.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.order, QStyle.SP_MessageBoxInformation,icontext="""To fit the photoluminences signal better the kernel used in the least square algorithm includes an RBF kernel and a polynomial kernel.\nThis determines the order of the polynomial kernel.""")
+        text = QLabel("Polynomial order")
+        grid.addWidget(text, 4, 0)
+        grid.addLayout(spinboxlayout, 4, 1)
+
+        # self.splitting_convergence1.setAlignment(Qt.AlignRight|Qt.AlignVCenter)
+        hlayout = QHBoxLayout()
+        self.splitting_convergence1 = QSpinBox()
+        self.splitting_convergence1.setRange(1,9)
+        self.splitting_convergence1.setValue(1)
+        self.splitting_convergence1.setMinimumWidth(split_width)
+        text = QLabel("e-")
+        self.splitting_convergence2 = QSpinBox()
+        self.splitting_convergence2.setRange(2,9)
+        self.splitting_convergence2.setValue(3)
+        self.splitting_convergence2.setMinimumWidth(split_width)
+        hlayout.addWidget(self.splitting_convergence1)
+        hlayout.addWidget(text)
+        hlayout.addWidget(self.splitting_convergence2)
+        spinboxlayout = Widget.AddIconToWidget(hlayout, QStyle.SP_MessageBoxInformation,addwidget=False, icontext=
+"""convergence: convergence determines when the algorithm should stop.
+This effects the innerloop which converts the segments into a smooth curve and
+the outerloop which determines when the final photoluminences signal is converged.
+The convergence is calculated using the mean average percentage error (MAPE) between the approximations of photoluminences at iteration i and i-1.
+So if convergence is set to 1e-3 than the algorithm stops if the difference between two approximation is less than 0.1 percent.""")
+        grid.addLayout(spinboxlayout, 5, 1)
+        text = QLabel("Splitting convergence")
+        grid.addWidget(text, 5, 0)
+
+        grid.addWidget(self.makeApproximatePanel(), 6, 0, 1, 2)
+
+        return self.splitting_checkbox
 
     def makeNoiseGibbsPanel(self):
         self.noise_gibbs_checkbox = QGroupBox("Adjust for gibbs phenomena/dirac delta spikes section")
@@ -89,7 +254,7 @@ class MainWindow(QWidget):
         self.noise_spike_padding.setRange(0,50)
         self.noise_spike_padding.setValue(0)
         self.noise_spike_padding.setMinimumWidth(width)
-        spinboxlayout = Widget.AddIconToWidget(self.noise_spike_padding, QStyle.SP_MessageBoxInformation,icontext="When a spikes left and right borders are determined this number of indices is added to both sides.\nThis is to compensate for the fact that the left and right borders are calculate at 30% of the maximum height instead of 0%.\nThe width is calcualte at 5% maximum height for the stability of the algorithm.")
+        spinboxlayout = Widget.AddIconToWidget(self.noise_spike_padding, QStyle.SP_MessageBoxInformation,icontext="When a spikes left and right borders are determined this number of indices is added to both sides.\nThis is to compensate for the fact that the left and right borders are calculate at 30% of the maximum height instead of 0%.\nThe width is calculated at 5% maximum height for the stability of the algorithm.")
         text = QLabel("Spike padding")
         grid.addWidget(text, 1, 0)
         grid.addLayout(spinboxlayout, 1, 1)
@@ -118,7 +283,7 @@ class MainWindow(QWidget):
         self.noise_removal_algorithm.addItem('LPF_PCA')
         self.noise_removal_algorithm.addItem('PCA')
         self.noise_removal_algorithm.addItem('PCA_LPF')
-        self.noise_removal_algorithm.setCurrentIndex(3)
+        self.noise_removal_algorithm.setCurrentIndex(2)
         self.noise_removal_algorithm.setMinimumWidth(width)
         comboBoxlayout = Widget.AddIconToWidget(self.noise_removal_algorithm, QStyle.SP_MessageBoxInformation, icontext=
 """PCA: Only use PCA to reduce noise in the signal. Noise can be automatically be determined or specified.
@@ -173,6 +338,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         self.percentage_noise.setValue(0.01)
         self.percentage_noise.setMinimumWidth(width)
         self.percentage_noise.setSingleStep(0.01)
+        self.percentage_noise.setDecimals(3)
         self.percentage_noise.setEnabled(False)
         spinboxlayout = Widget.AddIconToWidget(self.percentage_noise, QStyle.SP_MessageBoxInformation,icontext="This determines the percentage noise in each sample.\nThe noise removal alogirithm will keep removing noise till this percentage is reached.\nExcept when choosing PCA_LPF, see removal algorithm for more information.")
         grid.addLayout(spinboxlayout, 3, 1)
@@ -196,6 +362,10 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         self.save_as_txt = QCheckBox("Save as txt file")
         self.save_as_txt.setChecked(True)
         checkboxlayout = Widget.AddIconToWidget(self.save_as_txt, QStyle.SP_MessageBoxInformation, "This will save the data in the horiba file format,\nno matter the initial file format.")
+        grid.addLayout(checkboxlayout)
+
+        self.save_intermediate = QCheckBox("Save intermediate results")
+        checkboxlayout = Widget.AddIconToWidget(self.save_intermediate, QStyle.SP_MessageBoxInformation, "This will save the intermediate results as txt and/or numpy file.\nIntermediate results are preprocessing and smoothing.")
         grid.addLayout(checkboxlayout)
 
         self.save_dir = Dialog.FileBrowser('Save Directory', Dialog.OPENDIRECTORY)
@@ -465,6 +635,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         if (noise_removal_variables := self.__get_noise_removal_variables()) is None:
             return
 
+        if (splitting_variables := self.__get_splitting_variables()) is None:
+            return
+
         # show variables
         if SHOW_INPUT:
             msg = QMessageBox(self)
@@ -474,7 +647,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             text += '\n\n'
             text += "See selected noise removal parameters below:\n\n"
             text += '\n'.join((str(k)+' : '+str(v) for k,v in noise_removal_variables.items()))
-
+            text += '\n\n'
+            text += "See selected splitting parameters below:\n\n"
+            text += '\n'.join((str(k)+' : '+str(v) for k,v in splitting_variables.items()))
             msg.setText(text)
             msg.setWindowTitle("Inspect given parameters")
             try:
@@ -496,9 +671,31 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, None)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
+
+    def __get_splitting_variables(self):
+        """
+        check and get the values for the splitting step.
+        """
+        splitting_variables = {}
+        if not self.splitting_checkbox.isChecked():
+            return splitting_variables
+
+        splitting_variables["segment_fitting_algorithm"] = self.segment_fitting_algorithm.currentText()
+        splitting_variables["segment_width"] = self.segment_width.value()
+        splitting_variables["RBF_FWHM"] = self.RBF_FWHM.value()
+        splitting_variables["order"] = self.order.value()
+        splitting_variables["convergence"] = float(f"{self.splitting_convergence1.value()}e-{self.splitting_convergence2.value()}")
+
+        if approx_photo := self.approximate_checkbox.isChecked():
+            splitting_variables["RBF_FWHM_approximate"] = self.RBF_FWHM_aproximate.value()
+            splitting_variables["order_approximate"] = self.order_aproximate.value()
+            splitting_variables["convergence_approximate"] = float(f"{self.approximation_convergence1.value()}e-{self.approximation_convergence2.value()}")
+        splitting_variables["approximate_photo"] = approx_photo
+
+        return splitting_variables
 
     def __get_noise_removal_variables(self):
         """
@@ -585,6 +782,12 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         pref['save_as_txt'] = self.save_as_txt.isChecked()
         pref['save_as_numpy'] = self.save_as_numpy.isChecked()
+        if not pref['save_as_txt'] and not pref['save_as_numpy']:
+            dlg = QMessageBox.warning(self, "Input Error", "Select at least one option for saving!")
+            return
+
+        pref['save_intermediate_results'] = self.save_intermediate.isChecked()
+
         return pref
 
     def __get_files(self):

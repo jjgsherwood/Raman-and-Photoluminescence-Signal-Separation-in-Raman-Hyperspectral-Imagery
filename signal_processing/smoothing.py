@@ -43,7 +43,7 @@ class RemoveNoiseFFTPCA():
             A value of at least 2 is advised.
         spike_padding: When a spikes left and right borders are determined this number of indices is added to both sides.
             This is to compensate for the fact that the left and right borders are calculate at 30% of the maximum height instead of 0%.
-            The width is calcualte at 5% maximum height for the stability of the algorithm.
+            The width is calculated at 5% maximum height for the stability of the algorithm.
         max_spike_width: The maximum width of a spike in wavenumbers calculate at FW30M which is the full width at 30 percent of the maximum height.
         """
         self.k = None

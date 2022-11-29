@@ -1,20 +1,24 @@
 from StartUp import *
 
 class AddIconToWidget(QHBoxLayout):
-    def __init__(self, widget, icon, icontext="", *args, **kwargs):
+    def __init__(self, widget, icon, icontext="", addwidget=True, *args, **kwargs):
         super().__init__()
         self.__pre_init__(*args, **kwargs)
 
         self.label = QLabel()
-        self.label.setPixmap(widget.style().standardPixmap(icon))
+        self.label.setPixmap(self.label.style().standardPixmap(icon))
         self.icontext = icontext
 
-        self.addWidget(widget)
+        if addwidget:
+            self.addWidget(widget)
+            widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        else:
+            self.addLayout(widget)
         self.addWidget(self.label)
 
         # This makes sure the icon is next to the widget
         self.label.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
-        widget.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
         self.label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setAlignment(Qt.AlignLeft|Qt.AlignVCenter)
 
