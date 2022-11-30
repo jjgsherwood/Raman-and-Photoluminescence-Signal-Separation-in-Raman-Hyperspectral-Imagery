@@ -20,12 +20,12 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, text)
+            save_data(data, wavenumbers, filenames, save_variables, text, name="preprocessed_")
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, text)
+            save_data(data, wavenumbers, filenames, save_variables, text, name="noise_removed_")
 
     if splitting_variables:
         if splitting_variables["approximate_photo"]:
@@ -36,12 +36,18 @@ def run(args):
         raman = data - photo
 
     if photo is None:
-        save_data(data, wavenumbers, filenames, save_variables, text)
+        if noise_removal_variables
+            name = "noise_removed_"
+        elif preprocessing_variables:
+            name = "preprocessed_"
+        else:
+            name = "raw_"
+        save_data(data, wavenumbers, filenames, save_variables, text, name=name)
     else:
         filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
         filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
-        save_data(raman, wavenumbers, filenames_raman, save_variables, text)
-        save_data(photo, wavenumbers, filenames_photo, save_variables, text)
+        save_data(raman, wavenumbers, filenames_raman, save_variables, text, name="raman_")
+        save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences_")
     print("save complete", flush=True)
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
@@ -57,7 +63,7 @@ def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
             algorithm = splitting_variables["segment_fitting_algorithm"]
         )
         for i, img in enumerate(data):
-            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx.reshape(-1, img.shape[-1])).reshape(img.shape)
+            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx[i].reshape(-1, img.shape[-1])).reshape(img.shape)
             print(f"split for image {i+1} out of {len(data)} done", flush=True)
     else:
         for i, img in enumerate(data):
@@ -70,7 +76,7 @@ def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
                 segment_width = splitting_variables["segment_width"],
                 algorithm = splitting_variables["segment_fitting_algorithm"]
             )
-            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx.reshape(-1, img.shape[-1])).reshape(img.shape)
+            photo[i] = split(img.reshape(-1, img.shape[-1]), photo_approx[i].reshape(-1, img.shape[-1])).reshape(img.shape)
             print(f"split for image {i+1} out of {len(data)} done", flush=True)
     return photo
 
@@ -173,10 +179,10 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
 
     return data, wavenumbers
 
-def save_data(data, wavenumbers, filenames, save_variables, text):
+def save_data(data, wavenumbers, filenames, save_variables, text, name=""):
     # save data in new folder
     timestamp = str(datetime.datetime.now()).replace(":","-")
-    save_dir = save_variables["save_dir"] + '//' + timestamp + '//'
+    save_dir = save_variables["save_dir"] + '//' + name + timestamp + '//'
     os.makedirs(save_dir, exist_ok=True)
 
     with open(save_dir+"metadata.txt", "w") as f:
