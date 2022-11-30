@@ -20,12 +20,12 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, text, name="preprocessed_")
+            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed_")
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, text, name="noise_removed_")
+            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed_")
 
     if splitting_variables:
         if splitting_variables["approximate_photo"]:
