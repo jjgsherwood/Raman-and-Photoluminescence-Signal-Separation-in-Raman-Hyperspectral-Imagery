@@ -8,13 +8,6 @@ from config import *
 from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
-"""
-Make file format save option in GUI
-check what goed wrong with SnSe-WS2_532nm_Edge_5%_1 s_3.txt
-
-"""
-
-
 def run(args):
     files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text = args
 
