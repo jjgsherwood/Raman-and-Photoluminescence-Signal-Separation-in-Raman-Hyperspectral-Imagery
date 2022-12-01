@@ -719,15 +719,21 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             dlg = QMessageBox.warning(self, "Input Error", "Only one file can be shown!")
             return
 
-        data, wavenumbers, _ = Process.load_files([files], self.fast_import.isChecked())
+        if os.path.splitext(files[0])[1] == ".npy":
+            wavenumberFile = glob.glob(os.path.dirname(files[0])+'/*Wavenumbers*.npy')
+            data, wavenumbers, _ = Process.load_files([files, wavenumberFile], self.fast_import.isChecked())
+        else:
+            data, wavenumbers, _ = Process.load_files([files], self.fast_import.isChecked())
+        wavenumbers = wavenumbers.flatten()
+
         images_n = 0
         random_coor = lambda x,y: (np.random.randint(x), np.random.randint(y))
         x,y = random_coor(*data.shape[1:3])
         print(f"coordinates shown {x,y}")
-        plt.plot(wavenumbers[images_n], data[images_n][x][y])
+        plt.plot(wavenumbers, data[images_n][x][y])
         plt.title(f"coordinates shown {x,y}")
         plt.ylim(bottom=0)
-        plt.xlim(wavenumbers[images_n][0], wavenumbers[images_n][-1])
+        plt.xlim(wavenumbers[0], wavenumbers[-1])
         plt.show()
 
     def __get_splitting_variables(self):
