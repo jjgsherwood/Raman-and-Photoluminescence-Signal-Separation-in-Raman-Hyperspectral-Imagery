@@ -192,22 +192,22 @@ def save_data(data, wavenumbers, filenames, save_variables, text, name=""):
         if len(wavenumbers.shape) == 1:
             w = wavenumbers
             for name, img in zip(filenames, data):
-                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
-                textfile[0, 2:] = w
-                textfile[1:, 2:] = img.reshape(-1, len(w))
+                textfile = np.empty((np.prod(img.shape[:-1]), len(w)+2))
+                # textfile[0, 2:] = w
+                textfile[:, 2:] = img.reshape(-1, len(w))
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
-                textfile[1:, 0] = X.flatten()
-                textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
+                textfile[:, 0] = X.flatten()
+                textfile[:, 1] = Y.flatten()
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, header="\t\t"+"\t".join(map(str,w)), comments="", delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
         else:
             for name, img, w in zip(filenames, data, wavenumbers):
-                textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
-                textfile[0, 2:] = w
-                textfile[1:, 2:] = img.reshape(-1, len(w))
+                textfile = np.empty((np.prod(img.shape[:-1]), len(w)+2))
+                # textfile[0, 2:] = w
+                textfile[:, 2:] = img.reshape(-1, len(w))
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
-                textfile[1:, 0] = X.flatten()
-                textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
+                textfile[:, 0] = X.flatten()
+                textfile[:, 1] = Y.flatten()
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, header="\t\t"+"\t".join(map(str,w)), comments="", delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
 
     if save_variables["save_as_numpy"]:
         # save wavenumbers
@@ -240,6 +240,7 @@ def load_files(files, fast_loading):
             data = df.to_numpy()
 
             if header is None:
+                print(data[0])
                 wavenumbers = data[0,2:]
                 data = data[1:]
             else:
