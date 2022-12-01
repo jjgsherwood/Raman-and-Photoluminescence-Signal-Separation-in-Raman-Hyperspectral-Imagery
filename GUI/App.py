@@ -355,13 +355,38 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         grid = QVBoxLayout()
         groupbox.setLayout(grid)
 
+        width = 40
+        save_txt_layout = QVBoxLayout()
+        self.save_as_txt = QGroupBox("Save as txt file")
+        self.save_as_txt.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.save_as_txt.setCheckable(True)
+        self.save_as_txt.setLayout(save_txt_layout)
+        text = QLabel("info")
+        checkboxlayout = Widget.AddIconToWidget(text, QStyle.SP_MessageBoxInformation, "This will save the data in the horiba file format,\nno matter the initial file format.")
+        save_txt_layout.addLayout(checkboxlayout)
+
+        save_txt_layout2 = QHBoxLayout()
+        self.txt_fmt_1 = QSpinBox()
+        self.txt_fmt_1.setRange(2,20)
+        self.txt_fmt_1.setValue(10)
+        self.txt_fmt_1.setMinimumWidth(width)
+        text = QLabel("txt format (fmt): digits")
+        save_txt_layout2.addWidget(text)
+        save_txt_layout2.addWidget(self.txt_fmt_1)
+        self.txt_fmt_2 = QSpinBox()
+        self.txt_fmt_2.setRange(0,20)
+        self.txt_fmt_2.setValue(6)
+        self.txt_fmt_2.setMinimumWidth(width)
+        text = QLabel("decimals")
+        spinboxlayout = Widget.AddIconToWidget(self.txt_fmt_2, QStyle.SP_MessageBoxInformation,icontext="""The first number is the maximum number of digits per value.\nThe second number is the maximum number of decimals.""")
+        save_txt_layout2.addWidget(text)
+        save_txt_layout2.addLayout(spinboxlayout)
+        save_txt_layout2.addStretch()
+        save_txt_layout.addLayout(save_txt_layout2)
+        grid.addWidget(self.save_as_txt)
+
         self.save_as_numpy = QCheckBox("Save as numpy file")
         checkboxlayout = Widget.AddIconToWidget(self.save_as_numpy, QStyle.SP_MessageBoxInformation, "Loading a numpy file is much faster.\nRecommended when you only do the preprocesing\n and do the splitting later.")
-        grid.addLayout(checkboxlayout)
-
-        self.save_as_txt = QCheckBox("Save as txt file")
-        self.save_as_txt.setChecked(True)
-        checkboxlayout = Widget.AddIconToWidget(self.save_as_txt, QStyle.SP_MessageBoxInformation, "This will save the data in the horiba file format,\nno matter the initial file format.")
         grid.addLayout(checkboxlayout)
 
         self.save_intermediate = QCheckBox("Save intermediate results")
@@ -783,6 +808,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             os.makedirs(pref['save_dir'], exist_ok=True)
 
         pref['save_as_txt'] = self.save_as_txt.isChecked()
+        if pref['save_as_txt']:
+            pref['save_as_txt_fmt'] = f"%{self.txt_fmt_1.value()}.{self.txt_fmt_2.value()}f"
+
         pref['save_as_numpy'] = self.save_as_numpy.isChecked()
         if not pref['save_as_txt'] and not pref['save_as_numpy']:
             dlg = QMessageBox.warning(self, "Input Error", "Select at least one option for saving!")

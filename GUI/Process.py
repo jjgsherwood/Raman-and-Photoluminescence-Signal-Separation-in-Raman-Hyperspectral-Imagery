@@ -8,6 +8,13 @@ from config import *
 from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
+"""
+Make file format save option in GUI
+check what goed wrong with SnSe-WS2_532nm_Edge_5%_1 s_3.txt
+
+"""
+
+
 def run(args):
     files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text = args
 
@@ -198,7 +205,7 @@ def save_data(data, wavenumbers, filenames, save_variables, text, name=""):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
         else:
             for name, img, w in zip(filenames, data, wavenumbers):
                 textfile = np.empty((np.prod(img.shape[:-1])+1, len(w)+2))
@@ -207,7 +214,7 @@ def save_data(data, wavenumbers, filenames, save_variables, text, name=""):
                 Y, X = np.meshgrid(range(img.shape[1]), range(img.shape[0]))
                 textfile[1:, 0] = X.flatten()
                 textfile[1:, 1] = Y.flatten()
-                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt="%10.6f")
+                np.savetxt(f'{save_dir}{os.path.splitext(os.path.basename(name))[0]}.txt', textfile, delimiter="\t", fmt=save_variables['save_as_txt_fmt'])
 
     if save_variables["save_as_numpy"]:
         # save wavenumbers
