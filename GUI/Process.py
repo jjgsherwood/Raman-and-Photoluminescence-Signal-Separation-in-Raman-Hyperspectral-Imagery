@@ -20,12 +20,12 @@ def run(args):
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed_")
+            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results']:
-            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed_")
+            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
 
     if splitting_variables:
         if splitting_variables["approximate_photo"]:
@@ -36,18 +36,18 @@ def run(args):
         raman = data - photo
 
     if photo is None:
-        if noise_removal_variables
-            name = "noise_removed_"
+        if noise_removal_variables:
+            name = "noise_removed "
         elif preprocessing_variables:
-            name = "preprocessed_"
+            name = "preprocessed "
         else:
             name = "raw_"
         save_data(data, wavenumbers, filenames, save_variables, text, name=name)
     else:
         filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
         filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
-        save_data(raman, wavenumbers, filenames_raman, save_variables, text, name="raman_")
-        save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences_")
+        save_data(raman, wavenumbers, filenames_raman, save_variables, text, name="raman ")
+        save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences ")
     print("save complete", flush=True)
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
