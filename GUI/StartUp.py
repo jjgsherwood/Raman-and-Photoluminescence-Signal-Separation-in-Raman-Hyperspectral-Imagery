@@ -5,7 +5,11 @@ import glob
 from multiprocessing import Pool
 from multiprocessing import Process as multiprocess
 from collections import defaultdict
+import numpy as np
 
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 100
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *

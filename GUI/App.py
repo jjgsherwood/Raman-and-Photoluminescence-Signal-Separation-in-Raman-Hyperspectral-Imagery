@@ -585,6 +585,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         hlayout = QHBoxLayout(container)
         hlayout.addStretch()
 
+        button = QPushButton("Show selected file")
+        button.clicked.connect(self.show_file)
+        hlayout.addWidget(button)
         button = QPushButton("Quit")
         button.clicked.connect(self.quit)
         hlayout.addWidget(button)
@@ -701,6 +704,31 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
+
+    def show_file(self):
+        if self.dirFB.isEnabled():
+            dlg = QMessageBox.warning(self, "Input Error", "Only one file can be shown!\nNot a whole directory.")
+            return
+
+        files = self.filesFB.getPaths()
+        if not files:
+            dlg = QMessageBox.warning(self, "Input Error", "No files were selected!")
+            return
+
+        if len(files) != 1:
+            dlg = QMessageBox.warning(self, "Input Error", "Only one file can be shown!")
+            return
+
+        data, wavenumbers, _ = Process.load_files([files], self.fast_import.isChecked())
+        images_n = 0
+        random_coor = lambda x,y: (np.random.randint(x), np.random.randint(y))
+        x,y = random_coor(*data.shape[1:3])
+        print(f"coordinates shown {x,y}")
+        plt.plot(wavenumbers[images_n], data[images_n][x][y])
+        plt.title(f"coordinates shown {x,y}")
+        plt.ylim(bottom=0)
+        plt.xlim(wavenumbers[images_n][0], wavenumbers[images_n][-1])
+        plt.show()
 
     def __get_splitting_variables(self):
         """
