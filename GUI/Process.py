@@ -17,7 +17,10 @@ def run(args):
     photo = None
 
     # check if selected parameters are possible
-    if checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables):
+    try:
+        checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables)
+    except Exception as e:
+        print(e)
         return
 
     # check if preprocessing is enabled
