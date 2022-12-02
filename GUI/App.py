@@ -85,7 +85,7 @@ class MainWindow(QWidget):
 
         self.RBF_FWHM_aproximate = QSpinBox()
         self.RBF_FWHM_aproximate.setRange(50,1000)
-        self.RBF_FWHM_aproximate.setValue(300)
+        self.RBF_FWHM_aproximate.setValue(400)
         self.RBF_FWHM_aproximate.setSingleStep(25)
         self.RBF_FWHM_aproximate.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.RBF_FWHM_aproximate, QStyle.SP_MessageBoxInformation,icontext="""FWHM determines the sigma of the RBF, this also effects the number of radial basis (gaussians)\nbecause the distance between two means is determined based on the width of the gaussian at 80% height..""")

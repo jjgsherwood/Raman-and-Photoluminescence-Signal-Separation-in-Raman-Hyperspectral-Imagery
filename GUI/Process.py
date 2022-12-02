@@ -16,6 +16,10 @@ def run(args):
     photo_approx = None
     photo = None
 
+    # check if selected parameters are possible
+    if checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables):
+        return
+
     # check if preprocessing is enabled
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
@@ -49,6 +53,11 @@ def run(args):
         save_data(raman, wavenumbers, filenames_raman, save_variables, text, name="raman ")
         save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences ")
     print("save complete", flush=True)
+
+def checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables):
+    if splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
+        raise ValueError("The selected segement width is wider than the signal width!")
+    return True
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
     photo = np.empty(data.shape)
@@ -240,7 +249,6 @@ def load_files(files, fast_loading):
             data = df.to_numpy()
 
             if header is None:
-                print(data[0])
                 wavenumbers = data[0,2:]
                 data = data[1:]
             else:

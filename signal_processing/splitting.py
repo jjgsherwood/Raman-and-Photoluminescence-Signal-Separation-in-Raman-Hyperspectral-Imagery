@@ -206,7 +206,7 @@ class split():
         photo = poly_max
         i = 0
         alpha = 0.5
-        while (old:=error.MAPE(photo_old, photo)) > self.convergence or i < 5:
+        while ((old:=error.MAPE(photo_old, photo)) > self.convergence and i < 30) or i < 5 :
             # print("inner error",old, flush=True)
             photo, photo_old =  (1-alpha) * photo + alpha * self.photo_approximation(poly_max, weights), photo
             to_high = photo > img
