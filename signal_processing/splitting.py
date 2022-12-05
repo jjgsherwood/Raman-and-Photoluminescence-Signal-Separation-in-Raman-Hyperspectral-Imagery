@@ -4,9 +4,9 @@ from multiprocessing import Pool
 
 from signal_processing import error, LSQ_approximations as LSQ
 
-# import matplotlib.pyplot as plt
-# plt.rcParams['figure.figsize'] = (40.0, 20.0)
-# plt.rcParams['figure.dpi'] = 1000
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 500
 
 def Bezier_curve(p0,p1,p2):
     x0, x1, x2 = p0[0], p1[0], p2[0]
@@ -176,7 +176,7 @@ class split():
         half_width = int(self.width//2)
         poly_max = np.zeros(img.shape)
 
-        # n = 85
+        n = 482
         # plt.plot(img[n])
         # approximate left bounderie
         for right in range(self.stepsize, self.width, self.stepsize):
@@ -206,6 +206,7 @@ class split():
         photo = poly_max
         i = 0
         alpha = 0.5
+        # plt.plot(img[n], linewidth=0.3)
         while ((old:=error.MAPE(photo_old, photo)) > self.convergence and i < 30) or i < 5 :
             # print("inner error",old, flush=True)
             photo, photo_old =  (1-alpha) * photo + alpha * self.photo_approximation(poly_max, weights), photo
@@ -215,7 +216,11 @@ class split():
             weights /= np.mean(weights)
             poly_max[to_high] *= 0.975
             i += 1
-
+            # plt.plot(img[n], linewidth=0.3)
+            # plt.plot(photo_old[n], linewidth=0.1)
+            # plt.plot(photo[n], linewidth=0.1)
+            # plt.show()
+        # plt.show()
         print("inner iterations", i, flush=True)
         return photo
 
@@ -223,6 +228,9 @@ class split():
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
         alpha = 0.5
+        n = 482
+        plt.plot(img[n], linewidth=0.3)
+        plt.plot(new_photo[n], linewidth=0.1)
         while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
             # forget photo approximation
             if i == 0:
@@ -233,6 +241,12 @@ class split():
             print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
             new_photo[new_photo <= 0] = 1e-8
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
+            # plt.plot(img[n], linewidth=0.3)
+            # plt.plot(photo[n], linewidth=0.1)
+            plt.plot(new_photo[n], linewidth=0.1)
+            # plt.show()
             i += 1
+        plt.show()
+        print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
         print("outer iterations", i, flush=True)
         return photo

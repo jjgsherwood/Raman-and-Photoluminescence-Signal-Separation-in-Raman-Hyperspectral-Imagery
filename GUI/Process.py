@@ -19,7 +19,7 @@ def run(args):
     # check if selected parameters are possible
     try:
         checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables)
-    except Exception as e:
+    except ValueError as e:
         print(e)
         return
 
@@ -58,7 +58,7 @@ def run(args):
     print("save complete", flush=True)
 
 def checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables):
-    if splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
+    if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
         raise ValueError("The selected segement width is wider than the signal width!")
     return True
 

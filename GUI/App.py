@@ -325,7 +325,7 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
 
         self.automated_FWHM = QDoubleSpinBox()
         self.automated_FWHM.setRange(0.0,30.0)
-        self.automated_FWHM.setValue(3.0)
+        self.automated_FWHM.setValue(5.0)
         self.automated_FWHM.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.automated_FWHM, QStyle.SP_MessageBoxInformation,icontext=
 """This FWHM is used to calculate the cutoff point for the LPF (low pass band filter) after DCT (discreet cosine transform) is applied.
