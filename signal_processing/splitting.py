@@ -4,9 +4,9 @@ from multiprocessing import Pool
 
 from signal_processing import error, LSQ_approximations as LSQ
 
-import matplotlib.pyplot as plt
-plt.rcParams['figure.figsize'] = (20.0, 10.0)
-plt.rcParams['figure.dpi'] = 500
+# import matplotlib.pyplot as plt
+# plt.rcParams['figure.figsize'] = (20.0, 10.0)
+# plt.rcParams['figure.dpi'] = 500
 
 def Bezier_curve(p0,p1,p2):
     x0, x1, x2 = p0[0], p1[0], p2[0]
@@ -228,9 +228,9 @@ class split():
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
         alpha = 0.5
-        n = 482
-        plt.plot(img[n], linewidth=0.3)
-        plt.plot(new_photo[n], linewidth=0.1)
+        # n = 482
+        # plt.plot(img[n], linewidth=0.3)
+        # plt.plot(new_photo[n], linewidth=0.1)
         while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
             # forget photo approximation
             if i == 0:
@@ -243,10 +243,10 @@ class split():
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
             # plt.plot(img[n], linewidth=0.3)
             # plt.plot(photo[n], linewidth=0.1)
-            plt.plot(new_photo[n], linewidth=0.1)
+            # plt.plot(new_photo[n], linewidth=0.1)
             # plt.show()
             i += 1
-        plt.show()
+        # plt.show()
         print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
         print("outer iterations", i, flush=True)
         return photo
