@@ -121,16 +121,14 @@ def load_splitdata(data, batch_size, test_size=TEST_RATIO):
     # Thus a whole images is either test data or train data
     if test_size is not None:
         train_dataset, test_dataset = split_data_per_image(dataset, test_size)
+        train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
+                                  drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
     else:
-        train_dataset = dataset
+        test_dataset = dataset
+        train_loader = None
 
-    train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
-                              drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
-    if test_size is not None:
-        test_loader = DataLoader(test_dataset, batch_size, shuffle=False,
-                                 drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
-    else:
-        test_loader = None
+    test_loader = DataLoader(test_dataset, batch_size, shuffle=False,
+                             drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader
 
