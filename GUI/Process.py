@@ -9,7 +9,7 @@ from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, text = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
@@ -18,7 +18,7 @@ def run(args):
 
     # check if selected parameters are possible
     try:
-        checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables)
+        checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables)
     except ValueError as e:
         print(e)
         return
@@ -26,12 +26,12 @@ def run(args):
     # check if preprocessing is enabled
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
-        if save_variables['save_intermediate_results']:
+        if save_variables['save_intermediate_results'] and (noise_removal_variables or splitting_variables):
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
 
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
-        if save_variables['save_intermediate_results']:
+        if save_variables['save_intermediate_results'] and splitting_variables:
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
 
     if splitting_variables:
@@ -42,6 +42,7 @@ def run(args):
             photo = splitting_data(data, data, wavenumbers, splitting_variables)
         raman = data - photo
 
+    # saving data
     if photo is None:
         if noise_removal_variables:
             name = "noise_removed "
@@ -57,7 +58,14 @@ def run(args):
         save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences ")
     print("save complete", flush=True)
 
-def checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables):
+    if NN_train_variables:
+        print("start training neural network", flush=True)
+
+        
+
+
+
+def checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables):
     if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
         raise ValueError("The selected segement width is wider than the signal width!")
     return True

@@ -6,7 +6,7 @@ OPENDIRECTORY = 2
 SAVEFILE = 3
 
 class FileBrowser(QWidget):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=DEFAULT_DIR):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=DEFAULT_DIR, max_height=200, max_width=450):
         super().__init__()
         layout = QHBoxLayout()
         self.setLayout(layout)
@@ -14,19 +14,25 @@ class FileBrowser(QWidget):
         self.filter = filter
         self.dirpath = dirpath
         self.filepaths = []
+        self.max_height = max_height
+        self.max_width = max_width
 
         self.label = QLabel()
         self.label.setText(title)
         self.label.setFont(QFont("Arial",weight=QFont.Bold))
-        width = self.label.fontMetrics().boundingRect(self.label.text()).width()
+        width = 0
+        for l in title.split("\n"):
+            if (new_width := self.label.fontMetrics().boundingRect(l).width()) > width:
+                width = new_width
         self.label.setFixedWidth(width+10)
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         layout.addWidget(self.label)
 
         self.lineEdit = QPlainTextEdit(self)
         self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.lineEdit.setFixedWidth(320)
+        self.lineEdit.setFixedWidth(min(300,self.max_width))
         self.lineEdit.setFixedHeight(self.lineEdit.fontMetrics().boundingRect("TEST").height()+10)
+        self.lineEdit.setLineWrapMode(QPlainTextEdit.NoWrap)
 
         layout.addWidget(self.lineEdit)
 
@@ -38,7 +44,9 @@ class FileBrowser(QWidget):
     def clear(self):
         self.lineEdit.clear()
         self.lineEdit.setFixedHeight(self.lineEdit.fontMetrics().boundingRect("TEST").height()+10)
-        self.lineEdit.setFixedWidth(320)
+        self.lineEdit.setFixedWidth(min(300,self.max_width))
+        self.lineEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def setFile(self):
         if self.browser_mode == OPENFILE:
@@ -80,15 +88,21 @@ class FileBrowser(QWidget):
             width = max(width, new_width)
 
         # if it is to high make a scrollbar and at width for the scrollbar
-        if height > 500:
+        if height > self.max_height:
             self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
             width += 10
         else:
             self.lineEdit.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
-        self.lineEdit.setFixedWidth(width+10)
-        self.lineEdit.setFixedHeight(min(500,height)) #max such that everything fits in the screen
-        return height <= 300
+        if width > self.max_width:
+            self.lineEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+            height += 10
+        else:
+            self.lineEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.lineEdit.setFixedWidth(min(self.max_width, width+10))
+        self.lineEdit.setFixedHeight(min(self.max_height,height)) #max such that everything fits in the screen
+        return height <= self.max_height
 
     def getPaths(self):
         return self.filepaths

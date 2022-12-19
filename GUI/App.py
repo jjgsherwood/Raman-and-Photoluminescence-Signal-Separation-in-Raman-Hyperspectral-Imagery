@@ -45,6 +45,7 @@ class MainWindow(QWidget):
         # left and right columns
         self.leftLayout = QGridLayout()
         self.rightLayout = QGridLayout()
+        self.NNLayout = QGridLayout()
 
         self.fileBrowserPanel = self.makeFileBrowserPanel()
         self.fileSavePanel = self.makeFileSavePanel()
@@ -52,23 +53,121 @@ class MainWindow(QWidget):
         self.noiseRemovalPanel = self.makeNoiseRemovalPanel()
         self.makeSplittingPanel = self.makeSplittingPanel()
         self.fillPanel = QFrame()
+        self.fileNNPanel = self.makeNNPanel()
+        self.fillPanel2 = QFrame()
 
         self.leftLayout.addWidget(self.fileBrowserPanel, 0, 0)
         self.leftLayout.addWidget(self.fileSavePanel, 1, 0)
         self.leftLayout.addWidget(self.preProcessMethodPanel, 2, 0)
 
-        self.rightLayout.addWidget(self.noiseRemovalPanel, 1, 0)
-        self.rightLayout.addWidget(self.makeSplittingPanel, 2, 0)
-        self.rightLayout.addWidget(self.fillPanel, 6, 0)
+        self.rightLayout.addWidget(self.noiseRemovalPanel, 0, 0)
+        self.rightLayout.addWidget(self.makeSplittingPanel, 1, 0)
+        self.rightLayout.addWidget(self.fillPanel, 2, 0)
+
+        self.NNLayout.addWidget(self.fileNNPanel, 0, 0)
+        self.NNLayout.addWidget(self.fillPanel2, 1, 0)
 
         # join the columns into one panel
         self.gridlayout.addLayout(self.leftLayout)
         self.gridlayout.addLayout(self.rightLayout)
+        self.gridlayout.addLayout(self.NNLayout)
 
         # make the complete mainframe
         self.vlayout.addWidget(self.panel)
         self.buttonPanel = self.addButtonPanel()
         self.vlayout.addWidget(self.buttonPanel)
+
+    def makeSupervisedDataFileBrowser(self):
+        """
+        There are two modes on how to create input for the NN:
+         - Load in supervised data and preproccessing is used to clean up the raw data before learning
+         - Use the splitting to create supervised data. Clean up can be used but can be toggled off.
+        """
+        self.load_supervised_data = QGroupBox("Load supervised data")
+        self.load_supervised_data.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.load_supervised_data.setCheckable(True)
+        self.load_supervised_data.setChecked(False)
+        grid = QGridLayout()
+        self.load_supervised_data.setLayout(grid)
+        self.load_supervised_data.clicked.connect(self.onChangeLearningInput)
+
+        self.dirFB_raman = Dialog.FileBrowser('Load Raman\nDirectory', Dialog.OPENDIRECTORY, max_width=300)
+        self.dirFB_photo = Dialog.FileBrowser('Load\nPhotoluminences\nDirectory', Dialog.OPENDIRECTORY, max_width=300)
+
+        grid.addWidget(self.dirFB_raman, 1, 0)
+        grid.addWidget(self.dirFB_photo, 2, 0)
+
+        self.fast_import2 = QCheckBox("Fast loading")
+        self.fast_import2.setChecked(True)
+        fast_import_layout = Widget.AddIconToWidget(self.fast_import2, QStyle.SP_MessageBoxWarning,icontext="Instead of reading the file and placing each x,y,wavenumber at the correct place in the data array.\nThis assumes that the data is stored in a hardcoded order.")
+        grid.addLayout(fast_import_layout, 3, 0)
+        fast_import_layout.addStretch()
+
+        return self.load_supervised_data
+
+    def makeNNPanel(self):
+        self.NN_checkbox = QGroupBox("Train Neural network")
+        self.NN_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.NN_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.NN_checkbox.setLayout(grid)
+
+        text = QLabel("Info")
+        comboBoxlayout = Widget.AddIconToWidget(text, QStyle.SP_MessageBoxInformation, icontext=
+"""There are two ways to load supervised data for training.
+Enabling Load supervised data is mode one and disabling this checkbox is mode two.
+
+In mode one, the loaded data can be preprocessed and denoised before training
+and the supervised raman and photoluminences data is loaded from two seperate directories.
+It is crusial that the files loaded in these two directories have at least files containing
+the same name as the raw data in file selection section. For example, if file 'test.txt' is loaded
+than in both directories a file test... needs to exist e.g. test_raman.txt.
+
+In mode two, the loaded data is split using the deterministic splitting,
+which is than used as supervised data.
+The raw data can be either not smoothed or not smoothed.""")
+        comboBoxlayout.addStretch()
+
+        self.use_denoised_data = QCheckBox("Use denoised raw data")
+
+        grid.addLayout(comboBoxlayout, 0, 0, 1, 2)
+        grid.addWidget(self.makeSupervisedDataFileBrowser(), 1, 0, 1, 2)
+        grid.addWidget(self.use_denoised_data, 2, 0, 1, 2)
+
+        width = 100
+        self.epochs = QSpinBox()
+        self.epochs.setRange(1,1000)
+        self.epochs.setValue(50)
+        self.epochs.setSingleStep(5)
+        self.epochs.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.epochs, QStyle.SP_MessageBoxInformation,icontext=
+"""The number of epochs used during training. One epoch means that the neural network has seen all the data once.
+The larger this number is the langer the training will take, however not enough epochs and the training is aborted before completion.
+Also, to many epochs could potentially lead to overfitting the data. This is especially a problem when a small dataset is provided. """)
+        text = QLabel("Number of epochs")
+        grid.addWidget(text, 3, 0)
+        grid.addLayout(spinboxlayout, 3, 1)
+
+        self.batchsize = QSpinBox()
+        self.batchsize.setRange(8,1025)
+        self.batchsize.setValue(64)
+        self.batchsize.setSingleStep(16)
+        self.batchsize.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.batchsize, QStyle.SP_MessageBoxInformation,icontext=
+"""The batchsize determines how many samples are used during one training step.
+This should always be a power of two for efficiency reasons.
+
+VERY IMPORTANT!
+When there is not enough room to train the network on the GPU decrease the batchsize.
+
+A larger batchsize leads to a more stable gradient which can lead to faster training.
+However, a larger batchsize means less training steps per epoch.
+So, training could take more epochs which increases training time.""")
+        text = QLabel("Batchsize")
+        grid.addWidget(text, 4, 0)
+        grid.addLayout(spinboxlayout, 4, 1)
+
+        return self.NN_checkbox
 
     def makeApproximatePanel(self):
         """
@@ -144,6 +243,7 @@ So if convergence is set to 1e-3 than the algorithm stops if the difference betw
         self.splitting_checkbox.setCheckable(True)
         grid = QGridLayout()
         self.splitting_checkbox.setLayout(grid)
+        self.splitting_checkbox.clicked.connect(self.onChangeSplitData)
 
         text = QLabel("Info")
         comboBoxlayout = Widget.AddIconToWidget(text, QStyle.SP_MessageBoxInformation, icontext=
@@ -408,14 +508,14 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         grid = QGridLayout()
         groupbox.setLayout(grid)
 
-        self.waveFB = Dialog.FileBrowser('Select Wavenumber Info File',  Dialog.OPENFILE)
-        self.filesFB = Dialog.FileBrowserEnableQtw('Select Raman Hyperspectral Cubes',
+        self.waveFB = Dialog.FileBrowser('Select\nWavenumber File',  Dialog.OPENFILE)
+        self.filesFB = Dialog.FileBrowserEnableQtw('Select\nRHSI File(s)',
                                                    Dialog.OPENFILES,
                                                    filter='text files (*.txt) ;; csv files (*.csv) ;; numpy arrays (*.npy)',
                                                    dirpath='../data',
                                                    widget=self.waveFB,
                                                    mainPanel=self)
-        self.dirFB = Dialog.FileBrowser('Open Directory', Dialog.OPENDIRECTORY)
+        self.dirFB = Dialog.FileBrowser('Load Directory', Dialog.OPENDIRECTORY)
         self.dirFB.setEnabled(False)
         self.waveFB.setEnabled(False)
 
@@ -423,13 +523,13 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         grid.addWidget(self.waveFB, 1, 1)
         grid.addWidget(self.dirFB, 2, 1)
 
-        radiobutton = QRadioButton("Process File")
+        radiobutton = QRadioButton("Process\nFile")
         radiobutton.setChecked(True)
         radiobutton.dir = False
         radiobutton.toggled.connect(self.onChangeFileInput)
         grid.addWidget(radiobutton, 0, 0)
 
-        radiobutton = QRadioButton("Process Folder")
+        radiobutton = QRadioButton("Process\nFolder")
         radiobutton.dir = True
         radiobutton.toggled.connect(self.onChangeFileInput)
         grid.addWidget(radiobutton, 2, 0)
@@ -437,7 +537,8 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         self.fast_import = QCheckBox("Fast loading")
         self.fast_import.setChecked(True)
         fast_import_layout = Widget.AddIconToWidget(self.fast_import, QStyle.SP_MessageBoxWarning,icontext="Instead of reading the file and placing each x,y,wavenumber at the correct place in the data array.\nThis assumes that the data is stored in a hardcoded order.")
-        grid.addLayout(fast_import_layout, 3, 0)
+        fast_import_layout.addStretch()
+        grid.addLayout(fast_import_layout, 3, 0, 1, 2)
 
         return groupbox
 
@@ -569,17 +670,6 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         return self.cleaning_checkbox
 
-    def addProcessMethodPanel(self):
-        """ Which noise filter to use. Which grad approximation to use. Other setting such as: Photo width (FWHM)"""
-        """
-        Variable are: wavenumbers, order=9, FWHM=2000, size=1300, convergence=5e-3
-                      wavenumbers, convergence=1e-3, intervals=50, segment_width=400, order=9, FWHM=2000, size=1300, algorithm="Bezier"
-        """
-
-    def addDisplayPanel(self):
-        """ Checkboxes to say whether intermediate results and/or end results should be displayed"""
-        pass
-
     def addButtonPanel(self):
         container = QWidget()
         hlayout = QHBoxLayout(container)
@@ -604,21 +694,21 @@ This creates a more stable noise removal algorithm were the amount of noise remo
     def change_layout(self, is_small):
         # no change
         self.min_size()
-        if is_small is None or self.isSmall == is_small:
-            return
-        self.isSmall = is_small
-
-        # remove from layour
-        if is_small:
-            self.rightLayout.removeItem(self.rightLayout.itemAtPosition(0,0))
-        else:
-            self.leftLayout.removeItem(self.leftLayout.itemAtPosition(2,0))
-
-        # build new layout
-        if is_small:
-            self.leftLayout.addWidget(self.preProcessMethodPanel, 2, 0)
-        else:
-            self.rightLayout.addWidget(self.preProcessMethodPanel, 0, 0)
+        # if is_small is None or self.isSmall == is_small:
+        #     return
+        # self.isSmall = is_small
+        #
+        # # remove from layour
+        # if is_small:
+        #     self.leftLayout.removeItem(self.leftLayout.itemAtPosition(0,0))
+        # else:
+        #     self.leftLayout.removeItem(self.leftLayout.itemAtPosition(0,1))
+        #
+        # # build new layout
+        # if is_small:
+        #     self.leftLayout.addWidget(self.fileBrowserPanel, 0, 1)
+        # else:
+        #     self.leftLayout.addWidget(self.fileBrowserPanel, 0, 0)
         self.min_size()
 
     def quit(self):
@@ -666,6 +756,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         if (splitting_variables := self.__get_splitting_variables()) is None:
             return
 
+        if (NN_train_variables := self.__get_NN_variables()) is None:
+            return
+
         text = "See selected preprocessing parameters below:\n\n"
         text += '\n'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items()))
         text += '\n\n'
@@ -674,6 +767,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         text += '\n\n'
         text += "See selected splitting parameters below:\n\n"
         text += '\n'.join((str(k)+' : '+str(v) for k,v in splitting_variables.items()))
+        text += '\n\n'
+        text += "See selected neural network training parameters below:\n\n"
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in NN_train_variables.items()))
 
         # show variables
         if SHOW_INPUT:
@@ -687,7 +783,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             except IndexError:
                 wavefiles = ''
             save_text = "The following save location is selected:\n" + save_variables['save_dir'] + "\n\n"
-            save_text += "numpy save is enabled: " + str(save_variables['save_as_numpy']) + "\n"
+            save_text += "nsplitting_variablesumpy save is enabled: " + str(save_variables['save_as_numpy']) + "\n"
             save_text += "text save is enabled: " + str(save_variables['save_as_txt']) + "\n\n"
             msg.setDetailedText(save_text + "The following files are selected: \n\n" + '\n'.join(files[0]) + "\n\n" + wavefiles)
             msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
@@ -701,7 +797,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, text)]
+        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, text)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
@@ -906,13 +1002,51 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         dlg = QMessageBox.warning(self, "Input Error", "Something unexpected went wrong!")
         return
 
+    def __get_NN_variables(self):
+        NN_train_variables = {}
+        if not self.NN_checkbox.isChecked():
+            return NN_train_variables
+
+        if self.load_supervised_data.isChecked():
+            try:
+                NN_train_variables['raman_dir'] = self.dirFB_raman.getPaths()[0]
+            except IndexError:
+                dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
+                return
+
+            try:
+                NN_train_variables['photo_dir'] = self.dirFB_photo.getPaths()[0]
+            except IndexError:
+                dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
+                return
+
+
+            # TODO test if all data is present
+            self.dirFB_raman
+            self.dirFB_photo
+            self.fast_import2
+
+        NN_train_variables['use_denoised_data'] = self.use_denoised_data.isChecked()
+        NN_train_variables['epochs'] = self.epochs.value()
+        NN_train_variables['batchsize'] = self.batchsize.value()
+
+        return NN_train_variables
+
+    def onChangeLearningInput(self, event):
+        self.makeSplittingPanel.setChecked(not event)
+        self.use_denoised_data.setEnabled(not event)
+
+    def onChangeSplitData(self, event):
+        self.load_supervised_data.setChecked(not event)
+        self.use_denoised_data.setEnabled(event)
+
     def onChangeFileInput(self, event):
         if not event:
             return
 
-        # also change the layout back if it was the big setting
-        if not self.isSmall:
-            self.change_layout(not self.isSmall)
+        # # also change the layout back if it was the big setting
+        # if not self.isSmall:
+        #     self.change_layout(not self.isSmall)
 
         radioButton = self.sender()
         if radioButton.dir:
