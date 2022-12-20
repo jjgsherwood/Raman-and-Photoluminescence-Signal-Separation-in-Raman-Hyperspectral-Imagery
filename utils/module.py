@@ -1,6 +1,37 @@
 import torch
 import torch.nn as nn
 
+LOSS1 = nn.MSELoss(size_average=None, reduce=None, reduction='mean')
+LOSS2 = nn.L1Loss(size_average=None, reduce=None, reduction='mean')
+
+def loss_func(y, y_, x):
+    raman, photo = y
+    raman = raman.to(y_[0].device)
+    photo = photo.to(y_[0].device)
+    return LOSS1(y_[0], photo) + LOSS1(y_[1], raman)
+
+def acc_func(y, y_, x, data="train"):
+    """
+    This function is especially usefull to show things each log step.
+    """
+    # y_1, y_2, y_3, y_4 = y_
+    # y_1, y_2, y_3, y_4 = y_1.cpu().detach().numpy(), y_2.cpu().detach().numpy(), y_3.cpu().detach().numpy(), y_4.cpu().detach().numpy()
+    # x = x.cpu().detach().numpy()
+    # plt.title(f"plot {data} data")
+    # plt.plot(x[0], label='raw')
+    # plt.plot(y_1[0] + y_2[0], label='raman+photo')
+    # plt.plot(np.abs(x[0]-y_1[0]-y_2[0]), label='noise', color='orange')
+    # plt.plot(y[0][0], label='raman', color='c')
+    # plt.plot(y[1][0], label='photo', color='r')
+    # plt.plot(y_1[0], label='Conv1/photo', color='g')
+    # plt.plot(y_2[0], label='Conv2/raman', color='brown')
+    # plt.plot(y_3[0], label='Conv/pre_photo', color='b')
+    # plt.plot(y_4[0], label='Conv/pre_raman', color='r')
+    # plt.ylim(ymin=-10)
+    # plt.xlim(xmin=0, xmax=1300)
+    # plt.legend()
+    # plt.show()
+    return loss_func(y, y_, x)
 
 class SelectLayer(nn.Module):
     def __init__(self, layer_index):
@@ -77,7 +108,7 @@ class Conv_FFT(nn.Module):
     def forward(self, x):
         n_wavenumbers = x.shape[-1]
         # rfft to go from wavenumbers to frequencies
-        x0 = torch.fft.rfft(x, dim=d, norm='backward')
+        x0 = torch.fft.rfft(x, dim=1, norm='backward')
         x0 = torch.stack((x0.real, x0.imag), 1)
         x0 = self.net(x0)
         # this has 4 outputs 0,1 are real and 2,3 are imaginary

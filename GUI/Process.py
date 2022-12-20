@@ -2,11 +2,14 @@ import pandas as pd
 import numpy as np
 import os
 import datetime
+import copy
 
 from config import *
 
 from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting
+from utils import classifier, config, module, classifier
+
 
 def run(args):
     files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, text = args
@@ -15,10 +18,21 @@ def run(args):
     data, wavenumbers, filenames = load_files(files, fast_loading)
     photo_approx = None
     photo = None
+    raman_wavenumbers = None
+    photo_wavenumbers = None
+
+    # check for manual loading from files
+    try:
+        NN_train_variables['fast_loading']
+    except KeyError:
+        pass
+    else:
+        raman, raman_wavenumbers, _ = load_files(NN_train_variables['raman_files'], NN_train_variables['fast_loading'])
+        photo, photo_wavenumbers, _ = load_files(NN_train_variables['photo_files'], NN_train_variables['fast_loading'])
 
     # check if selected parameters are possible
     try:
-        checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables)
+        checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables)
     except ValueError as e:
         print(e)
         return
@@ -29,10 +43,18 @@ def run(args):
         if save_variables['save_intermediate_results'] and (noise_removal_variables or splitting_variables):
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
 
+    # save data for later use in the NN
+    if not NN_train_variables['use_denoised_data']:
+        raw = data
+
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results'] and splitting_variables:
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
+
+    # save data for later use in the NN
+    if NN_train_variables['use_denoised_data']:
+        raw = data
 
     if splitting_variables:
         if splitting_variables["approximate_photo"]:
@@ -61,14 +83,44 @@ def run(args):
     if NN_train_variables:
         print("start training neural network", flush=True)
 
-        
+        rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables)
 
-
-
-def checks(data, wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables):
+def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables):
     if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
         raise ValueError("The selected segement width is wider than the signal width!")
+
+    # check if all wave files are the same length
+    if len(wavenumbers.shape) == 1:
+        wavenumber = wavenumbers
+        wavenumbers = wavenumbers.reshape(1, *wavenumbers.shape)
+    else:
+        wavenumber = wavenumbers[0]
+    for w in np.concatenate((wavenumbers, raman_wavenumbers, photo_wavenumbers)):
+        check_wavenumbers = np.load(w)
+        if len(wavenumber) != len(check_wavenumbers):
+            raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
+        if sum(~np.isclose(wavenumber, check_wavenumbers)):
+            raise ValueError(self, "Input Error", f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+
     return True
+
+def train_NN(raw, photo, raman, NN_train_variables, save_variables):
+    kwargs = copy.copy(config.NN_INPUTS)
+    kwargs['epochs'] = NN_train_variables['epochs']
+    kwargs['batch_size'] = NN_train_variables['batchsize']
+    kwargs['loss_func'] = module.loss_func
+    kwargs['acc_func'] = module.acc_func
+    # this order is very important
+    data = np.stack((raw, raman, photo), 1)
+    rvc = classifier.SupervisedSplitting(**kwargs)
+
+    name = "saved_neural_network_"
+    timestamp = str(datetime.datetime.now()).replace(":","-")
+    save_dir = save_variables["save_dir"] + '//' + name + timestamp + '//'
+    os.makedirs(save_dir, exist_ok=True)
+
+    rvc.fit(data, save_dir)
+    return rvc
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):
     photo = np.empty(data.shape)

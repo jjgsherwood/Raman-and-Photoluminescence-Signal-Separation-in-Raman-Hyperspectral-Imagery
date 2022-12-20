@@ -1,7 +1,17 @@
+import os
 
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
+import torch
+import torch.nn as nn
+import torch.optim as optim
 
-class SupervisedClassifier(BaseEstimator):
+from utils import module, config
+from utils import train_utils as train
+from utils import dataset_utils as dataset
+
+class SupervisedSplitting():
     def __init__(self, **kwargs):
         self.kwargs = kwargs
 
@@ -12,8 +22,8 @@ class SupervisedClassifier(BaseEstimator):
         self.device = torch.device('cuda' if _use_cuda else 'cpu')
         print(f"device: {self.device}")
 
-    def fit(self, data):
-        self.model = Conv_FFT().to(self.device)
+    def fit(self, data, saved_NN):
+        self.model = module.Conv_FFT().to(self.device)
 
         parameters = filter(lambda x: x.requires_grad, self.model.parameters())
         self.optimizer = optim.Adam(parameters, lr=self.kwargs['lr'])
@@ -28,9 +38,9 @@ class SupervisedClassifier(BaseEstimator):
                     self.optimizer = optim.Adam(parameters, lr=self.kwargs['lr'])
                 continue
 
-            if epoch >= 3:
+            if epoch >= config.PRETRAINING_PHASE_1:
                 self.model.set_training(1)
-            if epoch >= 6:
+            if epoch >= config.PRETRAINING_PHASE_2:
                 self.model.set_training(2)
 
             print('-'*50)

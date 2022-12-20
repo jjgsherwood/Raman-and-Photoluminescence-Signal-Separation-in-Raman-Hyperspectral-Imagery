@@ -137,8 +137,7 @@ class SplitDataset(Dataset):
     TensorDataset with support of transforms.
     """
     def __init__(self, data, transform=None):
-        self.data, self.raman, self.photo, self.labels = zip(*data)
-        self.labels = torch.Tensor(np.array(self.labels))
+        self.data, self.raman, self.photo = zip(*data)
         self.data = torch.Tensor(np.array(self.data))
         self.raman = torch.Tensor(np.array(self.raman))
         self.photo = torch.Tensor(np.array(self.photo))
@@ -148,7 +147,6 @@ class SplitDataset(Dataset):
         self.data = self.data[indices]
         self.raman = self.raman[indices]
         self.photo = self.photo[indices]
-        self.labels = self.labels[indices]
 
     def __getitem__(self, index):
         pixel = index % (self.data.size(1) * self.data.size(2))
@@ -161,8 +159,7 @@ class SplitDataset(Dataset):
         if self.transform:
             data, raman, photo = self.transform(data), self.transform(raman), self.transform(photo)
 
-#         return data, raman, photo, (index_image, index_x, index_y)
-        return data, raman, photo, self.labels[index_image]
+        return data, raman, photo
 
     def __len__(self):
         return self.data.size(0) * self.data.size(1) * self.data.size(2)

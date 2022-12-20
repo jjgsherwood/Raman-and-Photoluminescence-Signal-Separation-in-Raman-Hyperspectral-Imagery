@@ -111,6 +111,7 @@ class MainWindow(QWidget):
         self.NN_checkbox.setCheckable(True)
         grid = QGridLayout()
         self.NN_checkbox.setLayout(grid)
+        self.NN_checkbox.clicked.connect(self.onChangeNN)
 
         text = QLabel("Info")
         comboBoxlayout = Widget.AddIconToWidget(text, QStyle.SP_MessageBoxInformation, icontext=
@@ -129,6 +130,7 @@ The raw data can be either not smoothed or not smoothed.""")
         comboBoxlayout.addStretch()
 
         self.use_denoised_data = QCheckBox("Use denoised raw data")
+        self.use_denoised_data.clicked.connect(self.onChangeDenoisedData)
 
         grid.addLayout(comboBoxlayout, 0, 0, 1, 2)
         grid.addWidget(self.makeSupervisedDataFileBrowser(), 1, 0, 1, 2)
@@ -377,6 +379,7 @@ So if convergence is set to 1e-3 than the algorithm stops if the difference betw
         self.noise_removal_checkbox.setCheckable(True)
         grid = QGridLayout()
         self.noise_removal_checkbox.setLayout(grid)
+        self.noise_removal_checkbox.clicked.connect(self.onChangeDenoisedData)
 
         self.noise_removal_algorithm = QComboBox()
         self.noise_removal_algorithm.addItem('LPF')
@@ -756,7 +759,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         if (splitting_variables := self.__get_splitting_variables()) is None:
             return
 
-        if (NN_train_variables := self.__get_NN_variables()) is None:
+        if (NN_train_variables := self.__get_NN_variables(files)) is None:
             return
 
         text = "See selected preprocessing parameters below:\n\n"
@@ -769,7 +772,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         text += '\n'.join((str(k)+' : '+str(v) for k,v in splitting_variables.items()))
         text += '\n\n'
         text += "See selected neural network training parameters below:\n\n"
-        text += '\n'.join((str(k)+' : '+str(v) for k,v in NN_train_variables.items()))
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in NN_train_variables.items() if 'files' not in k))
 
         # show variables
         if SHOW_INPUT:
@@ -950,6 +953,29 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         return pref
 
+    def __get_files_from_folder(self, dir_path):
+        npy_files = glob.glob(dir_path + '/[!Wavenumbers]*.npy')
+        wave_files = glob.glob(dir_path + '/*Wavenumbers.npy')
+        txt_files = glob.glob(dir_path + '/*.txt')
+        # check if there are numpy files in the folder and a wavenumber file
+        if npy_files and wave_files:
+            if len(wave_files) == 1:
+                return npy_files, wave_files
+            checked_npy_files = []
+            for file in npy_files:
+                if 'FileNames' in file:
+                    continue
+                if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
+                    dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
+                    return
+                checked_npy_files.append(file)
+            return checked_npy_files, wave_files
+        elif txt_files:
+            return (txt_files,)
+        else:
+            dlg = QMessageBox.warning(self, "Input Error", "Files in folder could not be loaded!\n\nNo .txt files were found in the folder!\nNo .npy files were found in the folder!\nOr ..wavernumbers.npy was missing in the folder!")
+        return
+
     def __get_files(self):
         """
         read the filenames and check compatibility.
@@ -960,27 +986,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
                 dlg = QMessageBox.warning(self, "Input Error", "Please select a folder!")
                 return
 
-            npy_files = glob.glob(self.dirFB.getPaths()[0]+'/[!Wavenumbers]*.npy')
-            wave_files = glob.glob(self.dirFB.getPaths()[0]+'/*Wavenumbers.npy')
-            txt_files = glob.glob(self.dirFB.getPaths()[0]+'/*.txt')
-            # check if there are numpy files in the folder and a wavenumber file
-            if npy_files and wave_files:
-                if len(wave_files) == 1:
-                    return npy_files, wave_files
-                checked_npy_files = []
-                for file in npy_files:
-                    if 'FileNames' in file:
-                        continue
-                    if file.replace('.npy','_Wavenumbers.npy') not in wave_files:
-                        dlg = QMessageBox.warning(self, "Input Error", f"{file} has no wavenumber file!")
-                        return
-                    checked_npy_files.append(file)
-                return checked_npy_files, wave_files
-            elif txt_files:
-                return (txt_files,)
-            else:
-                dlg = QMessageBox.warning(self, "Input Error", "Files in folder could not be loaded!\n\nNo .txt files were found in the folder!\nNo .npy files were found in the folder!\nOr ..wavernumbers.npy was missing in the folder!")
-            return
+            dir_path = self.dirFB.getPaths()[0]
+            return self.__get_files_from_folder(dir_path)
+
         else: # process the selected files
             files = self.filesFB.getPaths()
             if not files:
@@ -1002,29 +1010,63 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         dlg = QMessageBox.warning(self, "Input Error", "Something unexpected went wrong!")
         return
 
-    def __get_NN_variables(self):
+    def __get_NN_variables(self, files):
         NN_train_variables = {}
         if not self.NN_checkbox.isChecked():
             return NN_train_variables
 
         if self.load_supervised_data.isChecked():
             try:
-                NN_train_variables['raman_dir'] = self.dirFB_raman.getPaths()[0]
+                raman_dir = self.dirFB_raman.getPaths()[0]
             except IndexError:
-                dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
+                dlg = QMessageBox.warning(self, "Input Error", "Please select a folder to load the raman data from!")
                 return
 
             try:
-                NN_train_variables['photo_dir'] = self.dirFB_photo.getPaths()[0]
+                photo_dir = self.dirFB_photo.getPaths()[0]
             except IndexError:
-                dlg = QMessageBox.warning(self, "Input Error", "Please select a save folder!")
+                dlg = QMessageBox.warning(self, "Input Error", "Please select a folder to load the photoluminences data from!")
                 return
 
+            raw_files, *raw_wave_files = files
+            if tmp := self.__get_files_from_folder(raman_dir):
+                raman_files, *raman_wave_files = tmp
+            else:
+                return
+            if tmp := self.__get_files_from_folder(photo_dir):
+                photo_files, *photo_wave_files = tmp
+            else:
+                return
 
-            # TODO test if all data is present
-            self.dirFB_raman
-            self.dirFB_photo
-            self.fast_import2
+            # check if all files exists
+            filenames = [raw_files, raman_files, photo_files]
+            basenames = [[os.path.splitext(os.path.basename(f))[0] for f in filename] for filename in filenames]
+
+            # check if all files exist and order the raman and photo files correctly
+            # and filter out files that are not needed
+            raman_files_new = []
+            raman_wave_files_new = raman_wave_files[0] if len(raman_wave_files[0]) == 1 else []
+            photo_files_new = []
+            photo_wave_files_new = photo_wave_files[0] if len(photo_wave_files[0]) == 1 else []
+            for name in basenames[0]:
+                if not (raman_file_index := [i for i,b in enumerate(basenames[1]) if name in b]):
+                    dlg = QMessageBox.warning(self, "Input Error", f"file {name} does not exist in the raman folder.")
+                    return
+                if not (photo_file_index := [i for i,b in enumerate(basenames[2]) if name in b]):
+                    dlg = QMessageBox.warning(self, "Input Error", f"file {name} does not exist in the photo folder.")
+                    return
+
+                if raman_wave_files and len(raman_wave_files[0]) > 1:
+                    raman_wave_files_new.append(raman_wave_files[raman_file_index[0]])
+                raman_files_new.append(raman_file[raman_file_index[0]])
+
+                if photo_wave_files and len(photo_wave_files[0]) > 1:
+                    photo_wave_files_new.append(photo_wave_files[photo_file_index[0]])
+                photo_files_new.append(photo_file[photo_file_index[0]])
+
+            NN_train_variables['raman_files'] = (raman_files_new,) if not raman_wave_files else (raman_files_new, raman_wave_files_new)
+            NN_train_variables['photo_files'] = (photo_files_new,) if not photo_wave_files else (photo_files_new, photo_wave_files_new)
+            NN_train_variables['fast_loading'] = self.fast_import2.isChecked()
 
         NN_train_variables['use_denoised_data'] = self.use_denoised_data.isChecked()
         NN_train_variables['epochs'] = self.epochs.value()
@@ -1032,13 +1074,31 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         return NN_train_variables
 
+    def onChangeDenoisedData(self, event):
+        if event:
+            self.noise_removal_checkbox.setChecked(event)
+            if self.load_supervised_data.isChecked():
+                self.use_denoised_data.setChecked(event)
+        else:
+            self.use_denoised_data.setChecked(event)
+
     def onChangeLearningInput(self, event):
         self.makeSplittingPanel.setChecked(not event)
-        self.use_denoised_data.setEnabled(not event)
+        # self.use_denoised_data.setEnabled(not event)
+        if event and self.noise_removal_checkbox.isChecked():
+            self.use_denoised_data.setChecked(event)
 
     def onChangeSplitData(self, event):
-        self.load_supervised_data.setChecked(not event)
-        self.use_denoised_data.setEnabled(event)
+        if self.NN_checkbox.isChecked():
+            self.load_supervised_data.setChecked(not event)
+            # self.use_denoised_data.setEnabled(event)
+            if not event and self.noise_removal_checkbox.isChecked():
+                self.use_denoised_data.setChecked(not event)
+
+    def onChangeNN(self, event):
+        if event and not self.makeSplittingPanel.isChecked():
+            self.load_supervised_data.setChecked(True)
+            self.use_denoised_data.setChecked(self.noise_removal_checkbox.isChecked())
 
     def onChangeFileInput(self, event):
         if not event:
