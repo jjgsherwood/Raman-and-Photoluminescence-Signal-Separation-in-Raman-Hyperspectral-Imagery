@@ -36,6 +36,7 @@ def run(args):
     except ValueError as e:
         print(e)
         return
+    print("checks done")
 
     # check if preprocessing is enabled
     if preprocessing_variables:
@@ -82,7 +83,6 @@ def run(args):
 
     if NN_train_variables:
         print("start training neural network", flush=True)
-
         rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables)
 
 def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables):
@@ -95,12 +95,23 @@ def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessin
         wavenumbers = wavenumbers.reshape(1, *wavenumbers.shape)
     else:
         wavenumber = wavenumbers[0]
-    for w in np.concatenate((wavenumbers, raman_wavenumbers, photo_wavenumbers)):
-        check_wavenumbers = np.load(w)
-        if len(wavenumber) != len(check_wavenumbers):
-            raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
+        for check_wavenumbers in wavenumbers:
+            if len(wavenumber) != len(check_wavenumbers):
+                raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
+            if sum(~np.isclose(wavenumber, check_wavenumbers)):
+                raise ValueError(self, "Input Error", f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+
+    raman_wavenumbers = raman_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
+    photo_wavenumbers = photo_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
+    try:
+        wavenumbers = np.concatenate((raman_wavenumbers, photo_wavenumbers))
+        wavenumber = wavenumbers[0]
+    except ValueError:
+        raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
+
+    for check_wavenumbers in wavenumbers:
         if sum(~np.isclose(wavenumber, check_wavenumbers)):
-            raise ValueError(self, "Input Error", f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+            raise ValueError(f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
 
     return True
 

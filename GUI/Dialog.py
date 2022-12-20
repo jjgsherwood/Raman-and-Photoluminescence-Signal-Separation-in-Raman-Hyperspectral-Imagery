@@ -96,7 +96,7 @@ class FileBrowser(QWidget):
 
         if width > self.max_width:
             self.lineEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-            height += 10
+            height += 20
         else:
             self.lineEdit.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 

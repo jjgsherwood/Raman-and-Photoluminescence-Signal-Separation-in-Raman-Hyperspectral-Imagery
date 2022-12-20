@@ -954,7 +954,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         return pref
 
     def __get_files_from_folder(self, dir_path):
-        npy_files = glob.glob(dir_path + '/[!Wavenumbers]*.npy')
+        npy_files = glob.glob(dir_path + '/[!Wave]*.npy')
         wave_files = glob.glob(dir_path + '/*Wavenumbers.npy')
         txt_files = glob.glob(dir_path + '/*.txt')
         # check if there are numpy files in the folder and a wavenumber file
@@ -1058,11 +1058,11 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
                 if raman_wave_files and len(raman_wave_files[0]) > 1:
                     raman_wave_files_new.append(raman_wave_files[raman_file_index[0]])
-                raman_files_new.append(raman_file[raman_file_index[0]])
+                raman_files_new.append(raman_files[raman_file_index[0]])
 
                 if photo_wave_files and len(photo_wave_files[0]) > 1:
                     photo_wave_files_new.append(photo_wave_files[photo_file_index[0]])
-                photo_files_new.append(photo_file[photo_file_index[0]])
+                photo_files_new.append(photo_files[photo_file_index[0]])
 
             NN_train_variables['raman_files'] = (raman_files_new,) if not raman_wave_files else (raman_files_new, raman_wave_files_new)
             NN_train_variables['photo_files'] = (photo_files_new,) if not photo_wave_files else (photo_files_new, photo_wave_files_new)

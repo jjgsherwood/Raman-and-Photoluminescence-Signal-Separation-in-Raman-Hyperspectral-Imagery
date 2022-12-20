@@ -13,10 +13,10 @@ change variables below to change config settings.
 # User directory
 # DEFAULT_DIR = __user_dir
 # my documents directory
-DEFAULT_DIR = [dir+'//' for dir in glob.glob(__user_dir+'//*') if 'doc' in dir.lower()][0]
+# DEFAULT_DIR = [dir+'//' for dir in glob.glob(__user_dir+'//*') if 'doc' in dir.lower()][0]
 # my data directory
 # DEFAULT_DIR = [dir+'//' for dir in glob.glob(__user_dir+'//*') if 'doc' in dir.lower()][0]+'data//'
-# DEFAULT_DIR = "J://Jonne//Documents//UvA//data"
+DEFAULT_DIR = "J://Jonne//Documents//UvA//data"
 
 # my save data directory
 DEFAULT_SAVE_DIR = DEFAULT_DIR
