@@ -92,14 +92,19 @@ def run(args):
         print("start training neural network", flush=True)
         # try to split one image in multiple images
         if 'split_image_in_val_and_train' in NN_train_variables:
-            shape = raw.shape[1:]
+            shape = raw.shape[2:]
             for i in range(3,raw.shape[1]+1):
                 try:
                     raw, photo, raman = raw.reshape(i,-1,*shape), photo.reshape(i,-1,*shape), raman.reshape(i,-1,*shape)
                 except ValueError:
                     continue
                 break
-            NN_train_variables['validation_percentage'] = f"{min(1,int(VALIDATION_PER * len(raw))) / len(raw) * 100}%"
+            NN_train_variables['validation_percentage'] = f"{min(1,int(config.VALIDATION_PER * len(raw))) / len(raw) * 100}%"
+            first, last = text.split("See selected neural network training parameters below:")
+            first += "See selected neural network training parameters below:\n\n"
+            first += "NN_train_variables['validation_percentage']"
+            first += last[1:]
+            text = first
         rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables, text)
 
 def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables):

@@ -65,6 +65,7 @@ class TensorDataset(Dataset):
 def split_data_per_image(dataset, validation_per=VALIDATION_PER):
     n_images = dataset.data.shape[0]
     n_test_images = max(1,int(validation_per * n_images))
+    print(n_images, n_test_images)
     indices = random.sample(range(n_images), n_test_images)
     reverse_indices = [i for i in range(n_images) if i not in indices]
     train_dataset = copy.copy(dataset)

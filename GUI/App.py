@@ -1095,9 +1095,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             # check if all files exist and order the raman and photo files correctly
             # and filter out files that are not needed
             raman_files_new = []
-            raman_wave_files_new = raman_wave_files[0] if len(raman_wave_files[0]) == 1 else []
+            raman_wave_files_new = raman_wave_files[0] if len(raman_wave_files) == 1 else []
             photo_files_new = []
-            photo_wave_files_new = photo_wave_files[0] if len(photo_wave_files[0]) == 1 else []
+            photo_wave_files_new = photo_wave_files[0] if len(photo_wave_files) == 1 else []
             for name in basenames[0]:
                 if not (raman_file_index := [i for i,b in enumerate(basenames[1]) if name in b]):
                     dlg = QMessageBox.warning(self, "Input Error", f"file {name} does not exist in the raman folder.")
@@ -1129,7 +1129,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             if QMessageBox.Cancel == QMessageBox.question(self, "Validation problem", "To get accurate validation scores at least two images are needed.\nClick ignore if you want to continue and split the images into two images,\none for training and one for validation.", QMessageBox.Ignore | QMessageBox.Cancel):
                 return
             NN_train_variables['split_image_in_val_and_train'] = True
-            
+
         NN_train_variables['use_denoised_data'] = self.use_denoised_data.isChecked()
         NN_train_variables['epochs'] = self.epochs.value()
         NN_train_variables['batchsize'] = self.batchsize.value()
