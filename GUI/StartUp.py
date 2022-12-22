@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import *
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from signal_processing import *
 from config import *
+# weird torch error if this is not included
+from utils.module import Conv_FFT, SelectLayer
 
 if __name__ == '__main__':
     # only import main if this file is run.

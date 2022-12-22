@@ -5,6 +5,8 @@ import Widget
 import Process
 import time
 
+from utils import config
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
@@ -54,6 +56,7 @@ class MainWindow(QWidget):
         self.makeSplittingPanel = self.makeSplittingPanel()
         self.fillPanel = QFrame()
         self.fileNNPanel = self.makeNNPanel()
+        self.fileLoadNNPanel = self.makeLoadNNPanel()
         self.fillPanel2 = QFrame()
 
         self.leftLayout.addWidget(self.fileBrowserPanel, 0, 0)
@@ -65,7 +68,8 @@ class MainWindow(QWidget):
         self.rightLayout.addWidget(self.fillPanel, 2, 0)
 
         self.NNLayout.addWidget(self.fileNNPanel, 0, 0)
-        self.NNLayout.addWidget(self.fillPanel2, 1, 0)
+        self.NNLayout.addWidget(self.fileLoadNNPanel, 1, 0)
+        self.NNLayout.addWidget(self.fillPanel2, 2, 0)
 
         # join the columns into one panel
         self.gridlayout.addLayout(self.leftLayout)
@@ -76,6 +80,36 @@ class MainWindow(QWidget):
         self.vlayout.addWidget(self.panel)
         self.buttonPanel = self.addButtonPanel()
         self.vlayout.addWidget(self.buttonPanel)
+
+    def makeLoadNNPanel(self):
+        self.NN_load_checkbox = QGroupBox("Load Neural network and split data")
+        self.NN_load_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.NN_load_checkbox.setCheckable(True)
+        grid = QGridLayout()
+        self.NN_load_checkbox.setLayout(grid)
+        self.NN_load_checkbox.setChecked(False)
+        self.NN_load_checkbox.clicked.connect(self.onChangeLoadNN)
+
+        self.LoadNNFB = Dialog.FileBrowser('Load NN', Dialog.OPENFILE, filter='pytorch files (*.pt)', max_width=400)
+        grid.addWidget(self.LoadNNFB, 0, 0, 1, 2)
+
+        width = 100
+        self.batchsize_load = QSpinBox()
+        self.batchsize_load.setRange(8,1025)
+        self.batchsize_load.setValue(64)
+        self.batchsize_load.setSingleStep(16)
+        self.batchsize_load.setMinimumWidth(width)
+        spinboxlayout = Widget.AddIconToWidget(self.batchsize_load, QStyle.SP_MessageBoxInformation,icontext=
+"""The batchsize determines how many samples are used during one inteference step.
+This should always be a power of two for efficiency reasons.
+
+VERY IMPORTANT!
+When there is not enough room to train the network on the GPU decrease the batchsize.""")
+        text = QLabel("Batchsize")
+        grid.addWidget(text, 1, 0)
+        grid.addLayout(spinboxlayout, 1, 1)
+
+        return self.NN_load_checkbox
 
     def makeSupervisedDataFileBrowser(self):
         """
@@ -111,6 +145,7 @@ class MainWindow(QWidget):
         self.NN_checkbox.setCheckable(True)
         grid = QGridLayout()
         self.NN_checkbox.setLayout(grid)
+        self.NN_checkbox.setChecked(False)
         self.NN_checkbox.clicked.connect(self.onChangeNN)
 
         text = QLabel("Info")
@@ -129,12 +164,23 @@ which is than used as supervised data.
 The raw data can be either not smoothed or not smoothed.""")
         comboBoxlayout.addStretch()
 
+        self.continue_training_checkbox = QGroupBox("Load Neural network to continue training")
+        self.continue_training_checkbox.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.continue_training_checkbox.setCheckable(True)
+        subgrid = QGridLayout()
+        self.continue_training_checkbox.setLayout(subgrid)
+        self.continue_training_checkbox.setChecked(False)
+
+        self.NNFB = Dialog.FileBrowser('Load NN', Dialog.OPENFILE, filter='pytorch files (*.pt)', max_width=380)
+        subgrid.addWidget(self.NNFB, 0, 0)
+
         self.use_denoised_data = QCheckBox("Use denoised raw data")
         self.use_denoised_data.clicked.connect(self.onChangeDenoisedData)
 
         grid.addLayout(comboBoxlayout, 0, 0, 1, 2)
         grid.addWidget(self.makeSupervisedDataFileBrowser(), 1, 0, 1, 2)
-        grid.addWidget(self.use_denoised_data, 2, 0, 1, 2)
+        grid.addWidget(self.continue_training_checkbox, 2, 0, 1, 2)
+        grid.addWidget(self.use_denoised_data, 3, 0, 1, 2)
 
         width = 100
         self.epochs = QSpinBox()
@@ -147,8 +193,8 @@ The raw data can be either not smoothed or not smoothed.""")
 The larger this number is the langer the training will take, however not enough epochs and the training is aborted before completion.
 Also, to many epochs could potentially lead to overfitting the data. This is especially a problem when a small dataset is provided. """)
         text = QLabel("Number of epochs")
-        grid.addWidget(text, 3, 0)
-        grid.addLayout(spinboxlayout, 3, 1)
+        grid.addWidget(text, 4, 0)
+        grid.addLayout(spinboxlayout, 4, 1)
 
         self.batchsize = QSpinBox()
         self.batchsize.setRange(8,1025)
@@ -166,8 +212,8 @@ A larger batchsize leads to a more stable gradient which can lead to faster trai
 However, a larger batchsize means less training steps per epoch.
 So, training could take more epochs which increases training time.""")
         text = QLabel("Batchsize")
-        grid.addWidget(text, 4, 0)
-        grid.addLayout(spinboxlayout, 4, 1)
+        grid.addWidget(text, 5, 0)
+        grid.addLayout(spinboxlayout, 5, 1)
 
         return self.NN_checkbox
 
@@ -228,16 +274,6 @@ So if convergence is set to 1e-3 than the algorithm stops if the difference betw
         return self.approximate_checkbox
 
     def makeSplittingPanel(self):
-        """
-        wavenumbers, order=1, FWHM=400, size=1300, convergence=5e-3
-        wavenumbers, convergence=1e-3, segment_width=400, order=1, FWHM=300, size=1300, algorithm="LS2"
-
-        wavenumbers, convergence, size, segment_width, order, FWHM, algorithm
-        main:
-        algorithm, segment_width, FWHM, order, convergence
-        approx:
-        convergence, order, FWHM, on/off
-        """
         width = 115
         split_width = (width - 25) // 2
         self.splitting_checkbox = QGroupBox("Splitting section")
@@ -497,8 +533,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         grid.addLayout(checkboxlayout)
 
         self.save_dir = Dialog.FileBrowser('Save Directory', Dialog.OPENDIRECTORY)
-        self.save_dir.lineEdit.appendPlainText(DEFAULT_SAVE_DIR)
-        self.save_dir.filepaths = [DEFAULT_SAVE_DIR]
+        # this leads to an error on windows which makes from the filepath an URL instead of a normal path.
+        # self.save_dir.lineEdit.appendPlainText(DEFAULT_SAVE_DIR)
+        # self.save_dir.filepaths = [DEFAULT_SAVE_DIR]
         checkboxlayout = Widget.AddIconToWidget(self.save_dir, QStyle.SP_MessageBoxInformation, "A new folder will be added to this directory,\n with a timestamp and all saved data.")
         grid.addLayout(checkboxlayout)
         grid.addStretch()
@@ -511,11 +548,10 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         grid = QGridLayout()
         groupbox.setLayout(grid)
 
-        self.waveFB = Dialog.FileBrowser('Select\nWavenumber File',  Dialog.OPENFILE)
+        self.waveFB = Dialog.FileBrowser('Select\nWavenumber File',  Dialog.OPENFILE, filter='numpy arrays (*.npy)')
         self.filesFB = Dialog.FileBrowserEnableQtw('Select\nRHSI File(s)',
                                                    Dialog.OPENFILES,
                                                    filter='text files (*.txt) ;; csv files (*.csv) ;; numpy arrays (*.npy)',
-                                                   dirpath='../data',
                                                    widget=self.waveFB,
                                                    mainPanel=self)
         self.dirFB = Dialog.FileBrowser('Load Directory', Dialog.OPENDIRECTORY)
@@ -762,6 +798,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         if (NN_train_variables := self.__get_NN_variables(files)) is None:
             return
 
+        if (NN_load_variables := self.__get_NN_load_variables()) is None:
+            return
+
         text = "See selected preprocessing parameters below:\n\n"
         text += '\n'.join((str(k)+' : '+str(v) for k,v in preprocessing_variables.items()))
         text += '\n\n'
@@ -773,6 +812,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         text += '\n\n'
         text += "See selected neural network training parameters below:\n\n"
         text += '\n'.join((str(k)+' : '+str(v) for k,v in NN_train_variables.items() if 'files' not in k))
+        text += '\n\n'
+        text += "See selected paremeters for loading neural network and splitting the data below:\n\n"
+        text += '\n'.join((str(k)+' : '+str(v) for k,v in NN_load_variables.items()))
 
         # show variables
         if SHOW_INPUT:
@@ -800,7 +842,15 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         fast_import = self.fast_import.isChecked()
 
-        args = [(files, fast_import, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, text)]
+        args = [(files,
+                 fast_import,
+                 preprocessing_variables,
+                 save_variables,
+                 noise_removal_variables,
+                 splitting_variables,
+                 NN_train_variables,
+                 NN_load_variables,
+                 text)]
         self.p = multiprocess(target=Process.run, args=args)
         self.p.start()
 
@@ -1064,15 +1114,49 @@ This creates a more stable noise removal algorithm were the amount of noise remo
                     photo_wave_files_new.append(photo_wave_files[photo_file_index[0]])
                 photo_files_new.append(photo_files[photo_file_index[0]])
 
+            if len(raman_files_new) < 2:
+                if QMessageBox.Cancel == QMessageBox.question(self, "Validation problem", "To get accurate validation scores at least two images are needed.\nClick ignore if you want to continue and split the images into two images,\none for training and one for validation.", QMessageBox.Ignore | QMessageBox.Cancel):
+                    return
+                NN_train_variables['split_image_in_val_and_train'] = True
+            else:
+                n_images = len(raman_files_new)
+                NN_train_variables['validation_percentage'] = f"{min(1,int(config.VALIDATION_PER * n_images)) / n_images * 100}%"
+
             NN_train_variables['raman_files'] = (raman_files_new,) if not raman_wave_files else (raman_files_new, raman_wave_files_new)
             NN_train_variables['photo_files'] = (photo_files_new,) if not photo_wave_files else (photo_files_new, photo_wave_files_new)
             NN_train_variables['fast_loading'] = self.fast_import2.isChecked()
-
+        elif len(files) < 2:
+            if QMessageBox.Cancel == QMessageBox.question(self, "Validation problem", "To get accurate validation scores at least two images are needed.\nClick ignore if you want to continue and split the images into two images,\none for training and one for validation.", QMessageBox.Ignore | QMessageBox.Cancel):
+                return
+            NN_train_variables['split_image_in_val_and_train'] = True
+            
         NN_train_variables['use_denoised_data'] = self.use_denoised_data.isChecked()
         NN_train_variables['epochs'] = self.epochs.value()
         NN_train_variables['batchsize'] = self.batchsize.value()
+        if self.continue_training_checkbox.isChecked():
+            NN_train_variables['NN_file'] = self.NNFB.getPaths()[0]
 
         return NN_train_variables
+
+    def __get_NN_load_variables(self):
+        NN_load_variables = {}
+        if not self.NN_load_checkbox.isChecked():
+            return NN_load_variables
+
+        try:
+            NN_load_variables["NN_file"] = self.LoadNNFB.getPaths()[0]
+        except IndexError:
+            dlg = QMessageBox.warning(self, "Input Error", "Please select a file to load the neural network from!")
+            return
+
+        NN_load_variables['batchsize'] = self.batchsize_load.value()
+
+        return NN_load_variables
+
+    def onChangeLoadNN(self, event):
+        if event:
+            self.NN_checkbox.setChecked(not event)
+            self.makeSplittingPanel.setChecked(not event)
 
     def onChangeDenoisedData(self, event):
         if event:
@@ -1081,6 +1165,8 @@ This creates a more stable noise removal algorithm were the amount of noise remo
                 self.use_denoised_data.setChecked(event)
         else:
             self.use_denoised_data.setChecked(event)
+            if self.load_supervised_data.isChecked():
+                self.noise_removal_checkbox.setChecked(event)
 
     def onChangeLearningInput(self, event):
         self.makeSplittingPanel.setChecked(not event)
@@ -1089,6 +1175,8 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             self.use_denoised_data.setChecked(event)
 
     def onChangeSplitData(self, event):
+        if event:
+            self.NN_load_checkbox.setChecked(not event)
         if self.NN_checkbox.isChecked():
             self.load_supervised_data.setChecked(not event)
             # self.use_denoised_data.setEnabled(event)
@@ -1096,8 +1184,9 @@ This creates a more stable noise removal algorithm were the amount of noise remo
                 self.use_denoised_data.setChecked(not event)
 
     def onChangeNN(self, event):
-        if event and not self.makeSplittingPanel.isChecked():
-            self.load_supervised_data.setChecked(True)
+        if event:
+            self.NN_load_checkbox.setChecked(not event)
+            self.load_supervised_data.setChecked(not self.makeSplittingPanel.isChecked())
             self.use_denoised_data.setChecked(self.noise_removal_checkbox.isChecked())
 
     def onChangeFileInput(self, event):

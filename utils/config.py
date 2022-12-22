@@ -1,5 +1,5 @@
 NUM_WORKERS = 0
-TEST_RATIO = 0.1
+VALIDATION_PER = 0.1
 
 # determine after how many epochs the training phases switch.
 PRETRAINING_PHASE_1 = 3

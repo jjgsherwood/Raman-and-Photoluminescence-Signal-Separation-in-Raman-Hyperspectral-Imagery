@@ -108,7 +108,7 @@ class FileBrowser(QWidget):
         return self.filepaths
 
 class FileBrowserEnableQtw(FileBrowser):
-    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=QDir.currentPath(), widget=None, mainPanel=None):
+    def __init__(self, title, mode=OPENFILE, filter='All files (*.*)', dirpath=DEFAULT_DIR, widget=None, mainPanel=None):
         super().__init__(title, mode=mode, filter=filter, dirpath=dirpath)
 
         if widget is None:

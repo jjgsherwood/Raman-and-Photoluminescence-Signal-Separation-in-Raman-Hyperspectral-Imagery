@@ -12,7 +12,7 @@ from utils import classifier, config, module, classifier
 
 
 def run(args):
-    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, text = args
+    files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables, text = args
 
     # load files
     data, wavenumbers, filenames = load_files(files, fast_loading)
@@ -20,6 +20,10 @@ def run(args):
     photo = None
     raman_wavenumbers = None
     photo_wavenumbers = None
+
+    # check segment width
+    if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
+        raise ValueError("The selected segement width is wider than the signal width!")
 
     # check for manual loading from files
     try:
@@ -30,22 +34,22 @@ def run(args):
         raman, raman_wavenumbers, _ = load_files(NN_train_variables['raman_files'], NN_train_variables['fast_loading'])
         photo, photo_wavenumbers, _ = load_files(NN_train_variables['photo_files'], NN_train_variables['fast_loading'])
 
-    # check if selected parameters are possible
-    try:
-        checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables)
-    except ValueError as e:
-        print(e)
-        return
-    print("checks done")
-
     # check if preprocessing is enabled
     if preprocessing_variables:
         data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
         if save_variables['save_intermediate_results'] and (noise_removal_variables or splitting_variables):
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
 
+    # check if selected parameters are possible
+    try:
+        checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables)
+    except ValueError as e:
+        print(e)
+        return
+    print("checks done")
+
     # save data for later use in the NN
-    if not NN_train_variables['use_denoised_data']:
+    if NN_train_variables and not NN_train_variables['use_denoised_data']:
         raw = data
 
     if noise_removal_variables:
@@ -54,7 +58,7 @@ def run(args):
             save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
 
     # save data for later use in the NN
-    if NN_train_variables['use_denoised_data']:
+    if NN_train_variables and NN_train_variables['use_denoised_data']:
         raw = data
 
     if splitting_variables:
@@ -64,6 +68,9 @@ def run(args):
         else:
             photo = splitting_data(data, data, wavenumbers, splitting_variables)
         raman = data - photo
+
+    if NN_load_variables:
+        raman, photo = split_with_NN(data, wavenumbers, NN_load_variables)
 
     # saving data
     if photo is None:
@@ -83,44 +90,73 @@ def run(args):
 
     if NN_train_variables:
         print("start training neural network", flush=True)
-        rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables)
+        # try to split one image in multiple images
+        if 'split_image_in_val_and_train' in NN_train_variables:
+            shape = raw.shape[1:]
+            for i in range(3,raw.shape[1]+1):
+                try:
+                    raw, photo, raman = raw.reshape(i,-1,*shape), photo.reshape(i,-1,*shape), raman.reshape(i,-1,*shape)
+                except ValueError:
+                    continue
+                break
+            NN_train_variables['validation_percentage'] = f"{min(1,int(VALIDATION_PER * len(raw))) / len(raw) * 100}%"
+        rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables, text)
 
-def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables):
-    if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
-        raise ValueError("The selected segement width is wider than the signal width!")
-
+def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables):
     # check if all wave files are the same length
-    if len(wavenumbers.shape) == 1:
-        wavenumber = wavenumbers
-        wavenumbers = wavenumbers.reshape(1, *wavenumbers.shape)
-    else:
-        wavenumber = wavenumbers[0]
-        for check_wavenumbers in wavenumbers:
+    if NN_train_variables or NN_load_variables:
+        if len(wavenumbers.shape) == 1:
+            wavenumber = wavenumbers
+            wavenumbers = wavenumbers.reshape(1, *wavenumbers.shape)
+        else:
+            wavenumber = wavenumbers[0]
+            for check_wavenumbers in wavenumbers:
+                if len(wavenumber) != len(check_wavenumbers):
+                    raise ValueError(f"file {check_wavenumbers} does not have the same number of wavenumbers as {wavenumbers[0]}.")
+                if sum(~np.isclose(wavenumber, check_wavenumbers)):
+                    raise ValueError(f"file {check_wavenumbers} does not have the same wavenumbers as {wavenumbers[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+
+    if NN_train_variables and raman_wavenumbers is not None:
+        # raman_wavenumbers = np.concatenate([r.reshape(-1, raman_wavenumbers.shape[-1]) for r in raman_wavenumbers])
+        # photo_wavenumbers = np.concatenate([p.reshape(-1, photo_wavenumbers.shape[-1]) for p in photo_wavenumbers])
+        raman_wavenumbers = raman_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
+        photo_wavenumbers = photo_wavenumbers.reshape(-1, photo_wavenumbers.shape[-1])
+
+        for i, check_wavenumbers in enumerate(raman_wavenumbers):
             if len(wavenumber) != len(check_wavenumbers):
-                raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
+                raise ValueError(f"file {NN_train_variables['raman_files'][i][0]} does not have the same number of wavenumbers as the raw data.")
             if sum(~np.isclose(wavenumber, check_wavenumbers)):
-                raise ValueError(self, "Input Error", f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+                print(wavenumber)
+                print(check_wavenumbers)
+                raise ValueError(f"file {NN_train_variables['raman_files'][i][0]} does not have the same wavenumbers as the raw data.\nTraining a neural nerwork with different inputs is not advised.")
 
-    raman_wavenumbers = raman_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
-    photo_wavenumbers = photo_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
-    try:
-        wavenumbers = np.concatenate((raman_wavenumbers, photo_wavenumbers))
-        wavenumber = wavenumbers[0]
-    except ValueError:
-        raise ValueError(f"file {w} does not have the same number of wavenumbers as {raw_wave_files[0]}.")
-
-    for check_wavenumbers in wavenumbers:
-        if sum(~np.isclose(wavenumber, check_wavenumbers)):
-            raise ValueError(f"file {w} does not have the same wavenumbers as {raw_wave_files[0]}.\nTraining a neural nerwork with different inputs is not possible.")
+        for i, check_wavenumbers in enumerate(photo_wavenumbers):
+            if len(wavenumber) != len(check_wavenumbers):
+                raise ValueError(f"file {NN_train_variables['photo_files'][i][0]} does not have the same number of wavenumbers as the raw data.")
+            if sum(~np.isclose(wavenumber, check_wavenumbers)):
+                raise ValueError(f"file {NN_train_variables['photo_files'][i][0]} does not have the same wavenumbers as the raw data.\nTraining a neural nerwork with different inputs is not advised.")
 
     return True
 
-def train_NN(raw, photo, raman, NN_train_variables, save_variables):
+def split_with_NN(data, wavenumbers, NN_load_variables):
+    load_file = NN_load_variables['NN_file']
+    kwargs = copy.copy(config.NN_INPUTS)
+    kwargs['batch_size'] = NN_load_variables['batchsize']
+    rvc = classifier.SupervisedSplitting(**kwargs)
+
+    """
+    TODO adjust number of wavenumbers to fit NN.
+    """
+
+    return rvc.predict(data, NN_load_variables["NN_file"])
+
+def train_NN(raw, photo, raman, NN_train_variables, save_variables, text):
     kwargs = copy.copy(config.NN_INPUTS)
     kwargs['epochs'] = NN_train_variables['epochs']
     kwargs['batch_size'] = NN_train_variables['batchsize']
     kwargs['loss_func'] = module.loss_func
     kwargs['acc_func'] = module.acc_func
+
     # this order is very important
     data = np.stack((raw, raman, photo), 1)
     rvc = classifier.SupervisedSplitting(**kwargs)
@@ -130,7 +166,14 @@ def train_NN(raw, photo, raman, NN_train_variables, save_variables):
     save_dir = save_variables["save_dir"] + '//' + name + timestamp + '//'
     os.makedirs(save_dir, exist_ok=True)
 
-    rvc.fit(data, save_dir)
+    with open(save_dir+"metadata.txt", "w") as f:
+        f.write(text)
+
+    try:
+        load_file = NN_train_variables['NN_file']
+    except KeyError:
+        load_file = None
+    rvc.fit(data, save_dir, load_file)
     return rvc
 
 def splitting_data(data, photo_approx, wavenumbers, splitting_variables):

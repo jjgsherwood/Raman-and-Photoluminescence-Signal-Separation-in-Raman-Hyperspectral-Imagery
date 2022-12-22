@@ -62,49 +62,9 @@ class TensorDataset(Dataset):
     def __len__(self):
         return self.data.size(0)*self.patches_per_images
 
-# def split_data(dataset, test_size=TEST_RATIO, seed=42):
-#     """ Something might be wrong here """
-#     np.random.seed(seed)
-#     train, test = train_test_split(dataset.data, test_size=test_size)
-#     train_dataset = copy.copy(dataset)
-#     test_dataset = copy.copy(dataset)
-#
-#     train_dataset.data = train
-#     test_dataset.data = test
-#     return train_dataset, test_dataset
-
-# def load_liver(data, batch_size, sample_size=5):
-#     transform = transforms.Compose([
-#         Vector_unit_normalization(),
-#         RandomFlip(),
-#         Random_Rotate_90(),
-#     ])
-#
-#     # tensor_data = torch.Tensor(data)
-#     dataset = TensorDataset(data, transform, sample_size)
-#
-#     # test data and train data are split on image level
-#     # Thus a whole images is either test data or train data
-#     train_dataset, test_dataset = split_data(dataset)
-#
-#     train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
-#                               drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
-#     test_loader = DataLoader(test_dataset, batch_size, shuffle=False,
-#                              drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
-#
-#     return train_loader, test_loader
-#
-# def load_liver_all(data):
-#     transform = transforms.Compose([
-#         Vector_unit_normalization(),
-#     ])
-#
-#     data = create_dataset_1x1(data)
-#     return torch.Tensor(data)
-
-def split_data_per_image(dataset, test_size=TEST_RATIO):
+def split_data_per_image(dataset, validation_per=VALIDATION_PER):
     n_images = dataset.data.shape[0]
-    n_test_images = int(TEST_RATIO * n_images)
+    n_test_images = max(1,int(validation_per * n_images))
     indices = random.sample(range(n_images), n_test_images)
     reverse_indices = [i for i in range(n_images) if i not in indices]
     train_dataset = copy.copy(dataset)
@@ -113,14 +73,21 @@ def split_data_per_image(dataset, test_size=TEST_RATIO):
     test_dataset.split(indices)
     return train_dataset, test_dataset
 
-def load_splitdata(data, batch_size, test_size=TEST_RATIO):
+def load_rawdata(data, batch_size):
     # tensor_data = torch.Tensor(data)
+    dataset = RawDataset(data)
+    test_loader = DataLoader(dataset, batch_size, shuffle=False,
+                             drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
+
+    return test_loader
+
+def load_splitdata(data, batch_size, validation_per=VALIDATION_PER):
     dataset = SplitDataset(data)
 
     # test data and train data are split on image level
     # Thus a whole images is either test data or train data
-    if test_size is not None:
-        train_dataset, test_dataset = split_data_per_image(dataset, test_size)
+    if validation_per is not None:
+        train_dataset, test_dataset = split_data_per_image(dataset, validation_per)
         train_loader = DataLoader(train_dataset, batch_size, shuffle=True,
                                   drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
     else:
@@ -131,6 +98,29 @@ def load_splitdata(data, batch_size, test_size=TEST_RATIO):
                              drop_last=False, pin_memory=True, num_workers=NUM_WORKERS)
 
     return train_loader, test_loader
+
+class RawDataset(Dataset):
+    """
+    TensorDataset with support of transforms.
+    """
+    def __init__(self, data, transform=None):
+        self.data = torch.Tensor(data)
+        self.transform = transform
+
+    def __getitem__(self, index):
+        pixel = index % (self.data.size(1) * self.data.size(2))
+        index_x = pixel % self.data.size(1)
+        index_y = pixel // self.data.size(1)
+        index_image = index // (self.data.size(1) * self.data.size(2))
+        data = self.data[index_image, index_x, index_y, :]
+
+        if self.transform:
+            data = self.transform(data)
+
+        return data
+
+    def __len__(self):
+        return self.data.size(0) * self.data.size(1) * self.data.size(2)
 
 class SplitDataset(Dataset):
     """
