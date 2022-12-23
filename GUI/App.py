@@ -688,6 +688,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         self.constant_wavenumber_choice = Widget.EditableComboBox(QDoubleValidator)
         self.constant_wavenumber_choice.addItem('minimum stepsize', 'min')
         self.constant_wavenumber_choice.addItem('maximum stepsize', 'max')
+        self.constant_wavenumber_choice.addItem('mean stepsize', 'mean')
         self.constant_wavenumber_choice.addItem('Type here for custom value', '----')
         checkboxlayout = Widget.AddIconAndTextToWidget(self.constant_wavenumber_choice, QStyle.SP_MessageBoxInformation, text=4*" ", icontext="Make sure that if you type a custom value you press enter.\nValue should only contain numbers and one dot e.g. 2.5\nThe unity is in wavenumbers.\n\n The stepsize is automatically calculated when choosing minimum or maximum stepsize,\n depending on the stepsizes found in the data.")
         VLayout1.addLayout(checkboxlayout)
@@ -870,17 +871,17 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         if os.path.splitext(files[0])[1] == ".npy":
             wavenumberFile = glob.glob(os.path.dirname(files[0])+'/*Wavenumbers*.npy')
-            data, wavenumbers, _ = Process.load_files([files, wavenumberFile], self.fast_import.isChecked())
+            data, wavenumbers, *_ = Process.load_files([files, wavenumberFile], self.fast_import.isChecked())
         else:
-            data, wavenumbers, _ = Process.load_files([files], self.fast_import.isChecked())
+            data, wavenumbers, *_ = Process.load_files([files], self.fast_import.isChecked())
         wavenumbers = wavenumbers.flatten()
 
         images_n = 0
         random_coor = lambda x,y: (np.random.randint(x), np.random.randint(y))
         x,y = random_coor(*data.shape[1:3])
         print(f"coordinates shown {x,y}")
-        plt.plot(wavenumbers, data[images_n][x][y])
         plt.title(f"coordinates shown {x,y}")
+        plt.plot(wavenumbers, data[images_n][x][y])
         plt.ylim(bottom=0)
         plt.xlim(wavenumbers[0], wavenumbers[-1])
         plt.show()

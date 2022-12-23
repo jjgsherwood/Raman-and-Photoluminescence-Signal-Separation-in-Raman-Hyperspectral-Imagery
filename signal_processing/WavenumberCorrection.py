@@ -24,12 +24,14 @@ def correct_wavenumbers_between_samples(data, wavenumbers, stepsize='min'):
 
     # left and rigth are determined such that the interpolation is always between points
     # and never outside the range of wavenumbers for all samples.
-    left_wavenumber = np.max(wavenumbers[:,0])
-    right_wavenumeber = np.min(wavenumbers[:,-1])
+    left_wavenumber = max(w[0] for w in wavenumbers)
+    right_wavenumeber = min(w[-1] for w in wavenumbers)
     if stepsize == 'min':
-        min_stepsize = np.min(wavenumbers[:,1:] - wavenumbers[:,:-1])
+        min_stepsize = min(np.partition(w[1:] - w[:-1], 2)[2] for w in wavenumbers)
     elif stepsize == 'max':
-        min_stepsize = np.max(wavenumbers[:,1:] - wavenumbers[:,:-1])
+        min_stepsize = max(np.partition(w[1:] - w[:-1], -3)[-3] for w in wavenumbers)
+    elif stepsize == 'mean':
+        min_stepsize = np.mean([np.mean(w[1:] - w[:-1]) for w in wavenumbers])
     else:
         min_stepsize = stepsize
 

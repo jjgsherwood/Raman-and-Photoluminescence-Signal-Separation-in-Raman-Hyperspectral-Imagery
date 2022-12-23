@@ -15,15 +15,21 @@ def run(args):
     files, fast_loading, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables, text = args
 
     # load files
-    data, wavenumbers, filenames = load_files(files, fast_loading)
+    data, wavenumbers, shapes, filenames = load_files(files, fast_loading)
     photo_approx = None
     photo = None
     raman_wavenumbers = None
     photo_wavenumbers = None
 
-    # check segment width
-    if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (wavenumbers[0][-1] - wavenumbers[0][0]):
-        raise ValueError("The selected segement width is wider than the signal width!")
+    data, wavenumbers = remove_duplicate_wavenumbers(data, wavenumbers)
+
+    # check if selected parameters are possible
+    try:
+        checks(wavenumbers, splitting_variables, preprocessing_variables)
+    except ValueError as e:
+        print(e)
+        return
+    print("checks 1 done")
 
     # check for manual loading from files
     try:
@@ -34,19 +40,19 @@ def run(args):
         raman, raman_wavenumbers, _ = load_files(NN_train_variables['raman_files'], NN_train_variables['fast_loading'])
         photo, photo_wavenumbers, _ = load_files(NN_train_variables['photo_files'], NN_train_variables['fast_loading'])
 
-    # check if preprocessing is enabled
+    # check if wavenumbers are compatible
     if preprocessing_variables:
-        data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables)
+        data, wavenumbers = preprocessing(data, wavenumbers, preprocessing_variables, shapes)
         if save_variables['save_intermediate_results'] and (noise_removal_variables or splitting_variables):
-            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
+            save_data(data, wavenumbers, shapes, filenames, save_variables, "intermediate results!\n\n"+text.split("/n/n")[0], name="preprocessed ")
 
     # check if selected parameters are possible
     try:
-        checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables)
+        checks2(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables)
     except ValueError as e:
         print(e)
         return
-    print("checks done")
+    print("checks 2 done")
 
     # save data for later use in the NN
     if NN_train_variables and not NN_train_variables['use_denoised_data']:
@@ -55,7 +61,7 @@ def run(args):
     if noise_removal_variables:
         data = remove_noise(data, wavenumbers, noise_removal_variables)
         if save_variables['save_intermediate_results'] and splitting_variables:
-            save_data(data, wavenumbers, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
+            save_data(data, wavenumbers, shapes, filenames, save_variables, "intermediate results!\n\n"+text.split("See selected splitting parameters below")[0], name="noise_removed ")
 
     # save data for later use in the NN
     if NN_train_variables and NN_train_variables['use_denoised_data']:
@@ -80,12 +86,12 @@ def run(args):
             name = "preprocessed "
         else:
             name = "raw_"
-        save_data(data, wavenumbers, filenames, save_variables, text, name=name)
+        save_data(data, wavenumbers, shapes, filenames, save_variables, text, name=name)
     else:
         filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
         filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
-        save_data(raman, wavenumbers, filenames_raman, save_variables, text, name="raman ")
-        save_data(photo, wavenumbers, filenames_photo, save_variables, text, name="photoluminences ")
+        save_data(raman, wavenumbers, shapes, filenames_raman, save_variables, text, name="raman ")
+        save_data(photo, wavenumbers, shapes, filenames_photo, save_variables, text, name="photoluminences ")
     print("save complete", flush=True)
 
     if NN_train_variables:
@@ -107,7 +113,29 @@ def run(args):
             text = first
         rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables, text)
 
-def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables):
+def checks(wavenumbers, splitting_variables, preprocessing_variables):
+    # check wavenumber stepsize
+    if preprocessing_variables['all_images_same_stepsize']:
+        if preprocessing_variables['stepsize'] == 'min':
+            min_stepsize = min(np.partition(w[1:] - w[:-1], 2)[2] for w in wavenumbers)
+        elif preprocessing_variables['stepsize'] == 'max':
+            min_stepsize = max(np.partition(w[1:] - w[:-1], -3)[-3] for w in wavenumbers)
+
+        if preprocessing_variables['stepsize'] == 'min' or preprocessing_variables['stepsize'] == 'max':
+            mean_stepsize = np.mean([np.mean(w[1:] - w[:-1]) for w in wavenumbers])
+            ratio = mean_stepsize / min_stepsize
+            if ratio > 10 or ratio < 0.1:
+                raise ValueError(f"The stepsize chosen is {preprocessing_variables['stepsize']}, however the ratio between the mean value {mean_stepsize} and the chosen step size is {ratio}.\nThis can lead to errors in processes down the line.\nAborted!")
+
+def checks2(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessing_variables, save_variables, noise_removal_variables, splitting_variables, NN_train_variables, NN_load_variables):
+    # check segment width
+    if  len(wavenumbers.shape) == 1:
+        w = wavenumbers
+    else:
+        w = wavenumbers[0]
+    if "segment_width" in splitting_variables and splitting_variables["segment_width"] >= (w[-1] - w[0]):
+        raise ValueError("The selected segement width is wider than the signal width!")
+
     # check if all wave files are the same length
     if NN_train_variables or NN_load_variables:
         if len(wavenumbers.shape) == 1:
@@ -141,7 +169,29 @@ def checks(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessin
             if sum(~np.isclose(wavenumber, check_wavenumbers)):
                 raise ValueError(f"file {NN_train_variables['photo_files'][i][0]} does not have the same wavenumbers as the raw data.\nTraining a neural nerwork with different inputs is not advised.")
 
-    return True
+def check_and_correct_for_different_spacial_dim(data, shapes):
+    # check if shapes are equally sized
+    equal_sizes = True
+    for shape in shapes[1:]:
+        if shape != shapes[0]:
+            equal_sizes = False
+            break
+
+    if not equal_sizes:
+        data = np.concatenate([image.reshape(-1, image.shape[-1]) for image in data])
+        print("WARNING: due to incompatible images size, the image are combined in a single line of points")
+    return data.reshape(1,1,-1,data.shape[-1])
+
+def remove_duplicate_wavenumbers(data, wavenumbers):
+    for img,(d,w) in enumerate(zip(data, wavenumbers)):
+        for i in sorted(np.where(w[1:] - w[:-1] == 0)[0], reverse=True):
+            print(f"image {img} has a duplicate wavenumber at index {i} with value {w[i]}")
+            d[:,:,i] = (d[:,:,i] + d[:,:,i+1]) / 2
+            d = np.delete(d, i+1, -1)
+            w = np.delete(w, i+1, -1)
+            data[img] = d
+            wavenumbers[img] = w
+    return data, wavenumbers
 
 def split_with_NN(data, wavenumbers, NN_load_variables):
     load_file = NN_load_variables['NN_file']
@@ -270,7 +320,7 @@ def remove_noise(data, wavenumbers, noise_removal_variables):
 
     return data
 
-def preprocessing(data, wavenumbers, preprocessing_variables):
+def preprocessing(data, wavenumbers, preprocessing_variables, shapes):
     # check if same stepsize is enabled.
     if 'all_images_same_stepsize' in preprocessing_variables:
         print("starting correcting for stepsize", flush=True)
@@ -279,6 +329,8 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
         else:
             data, wavenumbers = WaveC.correct_wavenumbers_within_samples(data, wavenumbers, preprocessing_variables['stepsize'])
         print("correcting for stepsize done", flush=True)
+
+    data = check_and_correct_for_different_spacial_dim(data, shapes)
 
     # check if saturation is enabled.
     if 'saturation_width' in preprocessing_variables:
@@ -310,11 +362,21 @@ def preprocessing(data, wavenumbers, preprocessing_variables):
 
     return data, wavenumbers
 
-def save_data(data, wavenumbers, filenames, save_variables, text, name=""):
+def save_data(data, wavenumbers, shapes, filenames, save_variables, text, name=""):
     # save data in new folder
     timestamp = str(datetime.datetime.now()).replace(":","-")
     save_dir = save_variables["save_dir"] + '//' + name + timestamp + '//'
     os.makedirs(save_dir, exist_ok=True)
+
+    # check if data was compressed in one image or not
+    if data[0].shape[:-1] != shapes[0]:
+        data_lst = []
+        n = 0
+        for shape in shapes:
+            n_new = n + np.prod(shape)
+            data_lst.append(data[:,:,n:n_new,:].reshape(*shape, -1))
+            n = n_new
+        data = data_lst
 
     with open(save_dir+"metadata.txt", "w") as f:
         f.write(text)
@@ -378,8 +440,11 @@ def load_files(files, fast_loading):
 
             X = list(sorted(np.unique(data[:,0])))
             Y = list(sorted(np.unique(data[:,1])))
-
-            if fast_loading:
+            # single point load
+            if not len(wavenumbers):
+                wavenumbers = data[:,0]
+                img = data[:,1].reshape(1,1,-1)
+            elif fast_loading:
                 if header is None:
                     data = data[:,2:]
                     img = data.reshape(len(X), len(Y), len(wavenumbers))
@@ -421,4 +486,7 @@ def load_files(files, fast_loading):
                 all_images.append(np.load(file))
                 all_wavenumbers.append(np.load(file.replace('.npy','_Wavenumbers.npy')))
         print(f"data loaded", flush=True)
-    return np.array(all_images), np.array(all_wavenumbers), files
+
+    shapes = [image.shape[:-1] for image in all_images]
+
+    return all_images, all_wavenumbers, shapes, files
