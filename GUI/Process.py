@@ -100,7 +100,7 @@ def run(args):
         print("start training neural network", flush=True)
         # try to split one image in multiple images
         print('split_image_in_val_and_train' in NN_train_variables)
-        if 'split_image_in_val_and_train' in NN_train_variables:
+        if 'split_image_in_val_and_train' in NN_train_variables or raw.shape[0] < 2:
             shape = raw.shape[2:]
             for i in range(3,raw.shape[1]+1):
                 try:

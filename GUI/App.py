@@ -1126,7 +1126,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             NN_train_variables['raman_files'] = (raman_files_new,) if not raman_wave_files else (raman_files_new, raman_wave_files_new)
             NN_train_variables['photo_files'] = (photo_files_new,) if not photo_wave_files else (photo_files_new, photo_wave_files_new)
             NN_train_variables['fast_loading'] = self.fast_import2.isChecked()
-        elif len(files) < 2:
+        elif len(files[0]) < 2:
             if QMessageBox.Cancel == QMessageBox.question(self, "Validation problem", "To get accurate validation scores at least two images are needed.\nClick ignore if you want to continue and split the images into two images,\none for training and one for validation.", QMessageBox.Ignore | QMessageBox.Cancel):
                 return
             NN_train_variables['split_image_in_val_and_train'] = True
