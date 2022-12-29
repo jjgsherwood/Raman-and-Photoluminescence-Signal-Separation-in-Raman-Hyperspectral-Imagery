@@ -101,14 +101,14 @@ def run(args):
         # try to split one image in multiple images
         print('split_image_in_val_and_train' in NN_train_variables)
         if 'split_image_in_val_and_train' in NN_train_variables or raw.shape[0] < 2:
-            shape = raw.shape[2:]
+            shape = raw.shape[-1]
             for i in range(3,raw.shape[1]+1):
                 try:
-                    raw, photo, raman = raw.reshape(i,-1,*shape), photo.reshape(i,-1,*shape), raman.reshape(i,-1,*shape)
+                    raw, photo, raman = raw.reshape(i,-1,1,shape), photo.reshape(i,-1,1,shape), raman.reshape(i,-1,1,shape)
                 except ValueError:
                     continue
                 break
-            print(shape)
+            print(raw.shape)
             print(max(1,int(config.VALIDATION_PER * raw.shape[0])), min(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0])
             NN_train_variables['validation_percentage'] = f"{max(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0] * 100}%"
             first, last = text.split("See selected neural network training parameters below:")
