@@ -102,7 +102,7 @@ def run(args):
         print('split_image_in_val_and_train' in NN_train_variables)
         if 'split_image_in_val_and_train' in NN_train_variables or raw.shape[0] < 2:
             shape = raw.shape[-1]
-            for i in range(3,raw.shape[1]+1):
+            for i in range(3,np.prod(raw.shape[1:3])+1):
                 try:
                     raw, photo, raman = raw.reshape(i,-1,1,shape), photo.reshape(i,-1,1,shape), raman.reshape(i,-1,1,shape)
                 except ValueError:
