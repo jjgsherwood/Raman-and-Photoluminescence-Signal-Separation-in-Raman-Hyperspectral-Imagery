@@ -37,8 +37,8 @@ def run(args):
     except KeyError:
         pass
     else:
-        raman, raman_wavenumbers, _ = load_files(NN_train_variables['raman_files'], NN_train_variables['fast_loading'])
-        photo, photo_wavenumbers, _ = load_files(NN_train_variables['photo_files'], NN_train_variables['fast_loading'])
+        raman, raman_wavenumbers, *_ = load_files(NN_train_variables['raman_files'], NN_train_variables['fast_loading'])
+        photo, photo_wavenumbers, *_ = load_files(NN_train_variables['photo_files'], NN_train_variables['fast_loading'])
 
     # check if wavenumbers are compatible
     if preprocessing_variables:
@@ -95,8 +95,11 @@ def run(args):
     print("save complete", flush=True)
 
     if NN_train_variables:
+        raman = check_and_correct_for_different_spacial_dim(raman, shapes)
+        photo = check_and_correct_for_different_spacial_dim(photo, shapes)
         print("start training neural network", flush=True)
         # try to split one image in multiple images
+        print('split_image_in_val_and_train' in NN_train_variables)
         if 'split_image_in_val_and_train' in NN_train_variables:
             shape = raw.shape[2:]
             for i in range(3,raw.shape[1]+1):
@@ -105,13 +108,16 @@ def run(args):
                 except ValueError:
                     continue
                 break
-            NN_train_variables['validation_percentage'] = f"{min(1,int(config.VALIDATION_PER * len(raw))) / len(raw) * 100}%"
+            print(shape)
+            print(max(1,int(config.VALIDATION_PER * raw.shape[0])), min(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0])
+            NN_train_variables['validation_percentage'] = f"{max(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0] * 100}%"
             first, last = text.split("See selected neural network training parameters below:")
             first += "See selected neural network training parameters below:\n\n"
-            first += "NN_train_variables['validation_percentage']"
+            first += f"validation_percentage : {NN_train_variables['validation_percentage']}"
             first += last[1:]
             text = first
         rvc = train_NN(raw, photo, raman, NN_train_variables, save_variables, text)
+        print("training neural network done", flush=True)
 
 def checks(wavenumbers, splitting_variables, preprocessing_variables):
     # check wavenumber stepsize
@@ -150,17 +156,15 @@ def checks2(data, wavenumbers, raman_wavenumbers, photo_wavenumbers, preprocessi
                     raise ValueError(f"file {check_wavenumbers} does not have the same wavenumbers as {wavenumbers[0]}.\nTraining a neural nerwork with different inputs is not possible.")
 
     if NN_train_variables and raman_wavenumbers is not None:
-        # raman_wavenumbers = np.concatenate([r.reshape(-1, raman_wavenumbers.shape[-1]) for r in raman_wavenumbers])
-        # photo_wavenumbers = np.concatenate([p.reshape(-1, photo_wavenumbers.shape[-1]) for p in photo_wavenumbers])
-        raman_wavenumbers = raman_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
-        photo_wavenumbers = photo_wavenumbers.reshape(-1, photo_wavenumbers.shape[-1])
+        raman_wavenumbers = np.concatenate([r.reshape(-1, raman_wavenumbers[0].shape[-1]) for r in raman_wavenumbers])
+        photo_wavenumbers = np.concatenate([p.reshape(-1, photo_wavenumbers[0].shape[-1]) for p in photo_wavenumbers])
+        # raman_wavenumbers = raman_wavenumbers.reshape(-1, raman_wavenumbers.shape[-1])
+        # photo_wavenumbers = photo_wavenumbers.reshape(-1, photo_wavenumbers.shape[-1])
 
         for i, check_wavenumbers in enumerate(raman_wavenumbers):
             if len(wavenumber) != len(check_wavenumbers):
                 raise ValueError(f"file {NN_train_variables['raman_files'][i][0]} does not have the same number of wavenumbers as the raw data.")
             if sum(~np.isclose(wavenumber, check_wavenumbers)):
-                print(wavenumber)
-                print(check_wavenumbers)
                 raise ValueError(f"file {NN_train_variables['raman_files'][i][0]} does not have the same wavenumbers as the raw data.\nTraining a neural nerwork with different inputs is not advised.")
 
         for i, check_wavenumbers in enumerate(photo_wavenumbers):
@@ -180,7 +184,8 @@ def check_and_correct_for_different_spacial_dim(data, shapes):
     if not equal_sizes:
         data = np.concatenate([image.reshape(-1, image.shape[-1]) for image in data])
         print("WARNING: due to incompatible images size, the image are combined in a single line of points")
-    return data.reshape(1,1,-1,data.shape[-1])
+        return data.reshape(1,1,-1,data.shape[-1])
+    return np.array(data)
 
 def remove_duplicate_wavenumbers(data, wavenumbers):
     for img,(d,w) in enumerate(zip(data, wavenumbers)):
