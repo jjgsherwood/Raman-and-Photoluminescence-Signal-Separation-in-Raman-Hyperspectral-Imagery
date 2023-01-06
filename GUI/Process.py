@@ -99,7 +99,6 @@ def run(args):
         photo = check_and_correct_for_different_spacial_dim(photo, shapes)
         print("start training neural network", flush=True)
         # try to split one image in multiple images
-        print('split_image_in_val_and_train' in NN_train_variables)
         if 'split_image_in_val_and_train' in NN_train_variables or raw.shape[0] < 2:
             shape = raw.shape[-1]
             for i in range(3,np.prod(raw.shape[1:3])+1):
@@ -119,7 +118,7 @@ def run(args):
 
 def checks(wavenumbers, splitting_variables, preprocessing_variables):
     # check wavenumber stepsize
-    if preprocessing_variables['all_images_same_stepsize']:
+    if "all_images_same_stepsize" in preprocessing_variables and preprocessing_variables['all_images_same_stepsize']:
         if preprocessing_variables['stepsize'] == 'min':
             min_stepsize = min(np.partition(w[1:] - w[:-1], 2)[2] for w in wavenumbers)
         elif preprocessing_variables['stepsize'] == 'max':
