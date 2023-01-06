@@ -108,8 +108,6 @@ def run(args):
                 except ValueError:
                     continue
                 break
-            print(raw.shape)
-            print(max(1,int(config.VALIDATION_PER * raw.shape[0])), min(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0])
             NN_train_variables['validation_percentage'] = f"{max(1,int(config.VALIDATION_PER * raw.shape[0])) /  raw.shape[0] * 100}%"
             first, last = text.split("See selected neural network training parameters below:")
             first += "See selected neural network training parameters below:\n\n"
