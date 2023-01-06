@@ -874,6 +874,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
             data, wavenumbers, *_ = Process.load_files([files, wavenumberFile], self.fast_import.isChecked())
         else:
             data, wavenumbers, *_ = Process.load_files([files], self.fast_import.isChecked())
+        data = np.array(data)
         wavenumbers = np.array(wavenumbers)
         wavenumbers = wavenumbers.flatten()
 
