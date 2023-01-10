@@ -881,6 +881,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         images_n = 0
         random_coor = lambda x,y: (np.random.randint(x), np.random.randint(y))
         x,y = random_coor(*data.shape[1:3])
+        x,y = 141, 14
         print(f"coordinates shown {x,y}")
         plt.title(f"coordinates shown {x,y}")
         plt.plot(wavenumbers, data[images_n][x][y])
