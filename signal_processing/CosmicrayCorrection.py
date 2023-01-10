@@ -174,7 +174,6 @@ class remove_cosmicrays():
                 for peak, *properties in zip(peaks,*properties.values()):
                     left = properties[name_to_index['left_bases']] + l
                     right = properties[name_to_index['right_bases']] + l
-                    print(x,y)
                     cosmicrays[(x,y)][peak+l] = (left, right)
 
         return cosmicrays
