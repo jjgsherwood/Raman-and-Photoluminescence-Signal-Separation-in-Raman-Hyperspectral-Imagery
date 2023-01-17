@@ -61,7 +61,7 @@ class remove_cosmicrays():
         self.region_padding = region_padding
         self.occ_per = occurrence_percentage
         self.extend = region_padding
-        self.k = interpolate_degree
+        self.interpolate_degree = interpolate_degree
 
     def __call__(self, img):
         local_points = self.find_cosmic_ray_noise_spectral(img)
@@ -100,7 +100,7 @@ class remove_cosmicrays():
                         sum((img[x,y,right:right+extend] - np.mean(img[x,y,right:right+extend]))**2)
 
                 # ext=3 makes sure that if left or right is missing the boundery value is used for a horizontal line.
-                func = interpolate.UnivariateSpline(rang, values, k=self.k, s=s, ext=3)
+                func = interpolate.UnivariateSpline(rang, values, k=self.interpolate_degree, s=s, ext=3)
                 img[x,y,left:right+1] = func(range(left,right+1))
 
         return img, cosmic_ray_points

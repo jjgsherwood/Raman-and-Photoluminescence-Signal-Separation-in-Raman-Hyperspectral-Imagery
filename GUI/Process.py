@@ -469,7 +469,7 @@ def load_files(files, fast_loading):
                         w = wavenumbers.index(d[2])
                         img[i,j,w] = d[3]
 
-                    wavenumbers = np.array(wavenumbers)
+            wavenumbers = np.array(wavenumbers)
 
             print(f"loaded  file {i+1} of {len(files)}: {file}", flush=True)
             all_images.append(img)
