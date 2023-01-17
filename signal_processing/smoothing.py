@@ -3,7 +3,7 @@ import copy
 
 from scipy.fft import dct
 from sklearn.decomposition import PCA
-from scipy import signal
+from scipy import signal, ndimage
 
 from signal_processing import error
 
@@ -51,7 +51,7 @@ class RemoveNoiseFFTPCA():
         if percentage_noise is None:
             if wavenumbers is None:
                 raise ValueError("Either the percentage_noise must be specified or the wavenumbers and min_FWHM must be specified!")
-            self.k = int(2 * (wavenumbers[-1] - wavenumbers[0]) / (3*min_FWHM))
+            self.k = int(2.674 * (wavenumbers[-1] - wavenumbers[0]) / (np.pi*min_FWHM)) 
 
         if algorithm not in {'PCA', 'LPF', 'LPF_PCA', 'PCA_LPF'}:
             raise ValueError("algorithm must be set to: PCA, LPF, LPF_PCA, PCA_LPF.")
@@ -85,6 +85,8 @@ class RemoveNoiseFFTPCA():
         cosine = dct(x-spike, type=2, norm='backward')
         cosine = cosine.T
         cosine[self.k:] = np.mean(cosine[self.k:], 0)
+        # cosine[self.k:] = 0
+        # cosine[self.k:] = ndimage.gaussian_filter(cosine[self.k:], sigma=(30,0), mode="nearest")
 
         return dct(cosine.T, type=3, norm="forward")+spike
 
@@ -92,13 +94,26 @@ class RemoveNoiseFFTPCA():
         percentage_noise = self.percentage_noise if self.percentage_noise is not None else self.auto_percentage_noise
         left, right = 1, x.shape[-1]
 
-        cosine = dct(x, type=2, norm='backward')
+        # find spike that are to similar to a dirac delta function
+        spike = np.zeros(x.shape)
+        if not self.gradient_width is None:
+            grad = np.abs(x[:,self.gradient_width:] - x[:,:-self.gradient_width])
+            std_grad = np.std(grad, 1)
+            for i in range(x.shape[0]):
+                position, details = signal.find_peaks(x[i], rel_height=.7, prominence=std_grad[i]*3, width=(None,self.max_spike_width))
+                for j,p in enumerate(position):
+                    half_w = int(details['widths'][j]//2+self.spike_padding)
+                    left, right = max(0, p-half_w), min(p+half_w, x.shape[1]-1)
+                    base = np.linspace(x[i,left], x[i,right], right-left+1)
+                    spike[i,left:right+1] = x[i,left:right+1] - base
+
+        cosine = dct(x-spike, type=2, norm='backward')
         cosine = cosine.T
         new_cosine = copy.copy(cosine)
         middle = (left + right) // 2
         while middle != left and middle != right:
             new_cosine[middle:] = np.mean(cosine[middle:], 0)
-            x_new = dct(new_cosine.T, type=3, norm="forward")
+            x_new = dct(new_cosine.T, type=3, norm="forward") + spike
 
             if self.error(x, x_new) < percentage_noise:
                 right = middle
