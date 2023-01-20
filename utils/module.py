@@ -8,7 +8,7 @@ def loss_func(y, y_, x):
     raman, photo = y
     raman = raman.to(y_[0].device)
     photo = photo.to(y_[0].device)
-    return LOSS1(y_[0], photo) + LOSS1(y_[1], raman)
+    return LOSS1(y_[0], photo) + LOSS1(y_[1], raman) + LOSS1(y_[0][:,1:] - y_[0][:,:-1], photo[:,1:] - photo[:,:-1])
 
 def acc_func(y, y_, x, data="train"):
     """
