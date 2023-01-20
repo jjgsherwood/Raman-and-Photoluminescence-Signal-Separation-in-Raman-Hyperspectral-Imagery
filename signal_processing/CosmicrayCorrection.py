@@ -57,7 +57,7 @@ class remove_cosmicrays():
 
         self.n_times = n_times
         self.min_FWHM = min_FWHM
-        self.k = int(2*(wavenumbers[-1] - wavenumbers[0]) / (3*FWHM_smoothing))
+        self.k = int(2.674*(wavenumbers[-1] - wavenumbers[0]) / (np.pi*FWHM_smoothing))
         self.region_padding = region_padding
         self.occ_per = occurrence_percentage
         self.extend = region_padding
