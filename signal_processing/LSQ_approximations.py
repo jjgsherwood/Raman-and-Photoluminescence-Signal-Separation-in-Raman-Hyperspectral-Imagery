@@ -10,7 +10,7 @@ def gaussian(x, mu, sigma):
     return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
 
 class photo_approximation():
-    def __init__(self, wavenumbers=None, order=1, FWHM=500, size=1300, log=True):
+    def __init__(self, wavenumbers=None, order=1, FWHM=500, size=1300, log=True, width=0.95):
         self.log = log
         order = np.arange(order+1)
         space = np.linspace(0,1,size)
@@ -22,8 +22,8 @@ class photo_approximation():
             # see https://mathworld.wolfram.com/GaussianFunction.html
             sigma = FWHM / (wavenumbers[-1] - wavenumbers[0]) / (2 * np.sqrt(2 * np.log(2)))
             sigma = np.array([sigma])
-            width_between_max = (2 * np.sqrt(2 * np.log(100/80))) * sigma[0]
-            mu = np.linspace(0,1,int(1/width_between_max)+1)
+            width_between_max = (2 * np.sqrt(2 * np.log(1/width))) * sigma[0]
+            mu = np.linspace(-width_between_max/2,1+width_between_max/2,int(1/width_between_max)+2)
 
             self.RBF = gaussian(space, mu, sigma)
             self.kernel = np.concatenate((self.M, self.RBF), 1)

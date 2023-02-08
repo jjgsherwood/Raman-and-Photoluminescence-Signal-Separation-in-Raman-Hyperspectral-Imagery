@@ -1,6 +1,5 @@
 import numpy as np
 import copy
-from multiprocessing import Pool
 
 from signal_processing import error, LSQ_approximations as LSQ
 
@@ -207,7 +206,7 @@ class split():
         i = 0
         alpha = 1
         # plt.plot(img[n], linewidth=0.3)
-        while ((old:=error.MAPE(photo_old, photo)) > self.convergence and i < 30) or i < 5 :
+        while ((old:=error.MAPE(photo_old, photo)) > self.convergence and i < 30) or i < 5:
             # print("inner error",old, flush=True)
             photo, photo_old =  (1-alpha) * photo + alpha * self.photo_approximation(poly_max, weights), photo
             to_high = photo > img
