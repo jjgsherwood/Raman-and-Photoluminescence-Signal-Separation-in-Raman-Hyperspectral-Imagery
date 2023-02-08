@@ -176,7 +176,7 @@ class split():
         half_width = int(self.width//2)
         poly_max = np.zeros(img.shape)
 
-        n = 482
+        # n = 482
         # plt.plot(img[n])
         # approximate left bounderie
         for right in range(self.stepsize, self.width, self.stepsize):
@@ -205,7 +205,7 @@ class split():
         photo_old = -1
         photo = poly_max
         i = 0
-        alpha = 0.5
+        alpha = 1
         # plt.plot(img[n], linewidth=0.3)
         while ((old:=error.MAPE(photo_old, photo)) > self.convergence and i < 30) or i < 5 :
             # print("inner error",old, flush=True)
@@ -227,8 +227,8 @@ class split():
     def __call__(self, img, new_photo):
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
-        alpha = 0.5
-        # n = 482
+        alpha = 1
+        n = 81
         # plt.plot(img[n], linewidth=0.3)
         # plt.plot(new_photo[n], linewidth=0.1)
         while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
