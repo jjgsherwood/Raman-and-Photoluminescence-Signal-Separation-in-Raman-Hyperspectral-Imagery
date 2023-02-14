@@ -30,6 +30,7 @@ class photo_approximation():
 
     def __call__(self, x, w=None):
         if self.log:
+            # x = np.sqrt(x)
             x = np.log(x)
 
         if w is not None:
@@ -40,5 +41,6 @@ class photo_approximation():
             p, *_ = np.linalg.lstsq(self.kernel, x.T, rcond=None)
 
         if self.log:
+            # return ((self.kernel @ p)**2).T
             return np.exp(self.kernel @ p).T
         return (self.kernel @ p).T
