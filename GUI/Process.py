@@ -4,7 +4,7 @@ import os
 import datetime
 import copy
 
-from config import *
+from GUI.config import *
 
 from signal_processing import WavenumberCorrection as WaveC
 from signal_processing import SaturationCorrection, CosmicrayCorrection, smoothing, splitting

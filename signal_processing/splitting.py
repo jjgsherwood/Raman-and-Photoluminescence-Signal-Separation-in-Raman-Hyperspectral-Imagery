@@ -213,7 +213,9 @@ class split():
             mean_error = np.mean(to_high, 0)
             weights += mean_error
             weights /= np.mean(weights)
-            poly_max[to_high] *= 0.975
+            # poly_max[to_high] *= 0.975
+            poly_max[to_high] += (img-photo)[to_high]
+            poly_max[poly_max <= 0] = 1e-3
             i += 1
             # plt.plot(img[n], linewidth=0.3)
             # plt.plot(photo_old[n], linewidth=0.1)
