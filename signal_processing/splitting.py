@@ -58,6 +58,7 @@ class preliminary_split():
             weights += mean_error
             weights /= np.mean(weights)
             target[to_high] *= 0.975
+            photo[photo < 1] = 1
         return photo
 
 class split():
@@ -217,6 +218,7 @@ class split():
             poly_max[to_high] += (img-photo)[to_high]
             poly_max[poly_max <= 0] = 1e-3
             i += 1
+            photo[photo < 1] = 1
             # plt.plot(img[n], linewidth=0.3)
             # plt.plot(photo_old[n], linewidth=0.1)
             # plt.plot(photo[n], linewidth=0.1)
@@ -242,6 +244,7 @@ class split():
             print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
             new_photo[new_photo <= 0] = 1e-8
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
+            photo[photo < 1] = 1
             # plt.plot(img[n], linewidth=0.3)
             # plt.plot(photo[n], linewidth=0.1)
             # plt.plot(new_photo[n], linewidth=0.1)
