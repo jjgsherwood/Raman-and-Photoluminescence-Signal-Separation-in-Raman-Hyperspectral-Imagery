@@ -10,7 +10,7 @@ def gaussian(x, mu, sigma):
     return x.reshape(-1, np.prod(mu.shape) * np.prod(sigma.shape))
 
 class photo_approximation():
-    def __init__(self, wavenumbers=None, order=1, FWHM=500, size=1300, log=True, width=0.95):
+    def __init__(self, wavenumbers=None, order=1, FWHM=500, size=1300, log=False, width=0.95):
         self.log = log
         order = np.arange(order+1)
         space = np.linspace(0,1,size)

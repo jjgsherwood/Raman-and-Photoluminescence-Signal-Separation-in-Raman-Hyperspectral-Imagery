@@ -182,7 +182,7 @@ class remove_cosmicrays():
         regions = [[]]
         old_z = wavenumbers[0]-1
         for z in wavenumbers:
-            if old_z + self.region_padding >= z:
+            if old_z + 2*self.region_padding >= z:
                 regions[-1].append(z)
             else:
                 regions.append([z])

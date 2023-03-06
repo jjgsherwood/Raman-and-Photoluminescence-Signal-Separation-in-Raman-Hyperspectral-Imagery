@@ -231,7 +231,7 @@ class split():
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
         alpha = 1
-        n = 81
+        # n = 81
         # plt.plot(img[n], linewidth=0.3)
         # plt.plot(new_photo[n], linewidth=0.1)
         while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
