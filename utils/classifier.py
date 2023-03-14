@@ -76,4 +76,4 @@ class SupervisedSplitting():
             y_1, y_2, *_ = self.model(x)
             photo[batch_idx*self.kwargs['batch_size']:(batch_idx+1)*self.kwargs['batch_size']] = y_1.cpu().detach().numpy()
             raman[batch_idx*self.kwargs['batch_size']:(batch_idx+1)*self.kwargs['batch_size']] = y_2.cpu().detach().numpy()
-        return raman.reshape(data.shape), photo.reshape(data.shape)
+        return photo.reshape(data.shape), raman.reshape(data.shape)

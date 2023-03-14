@@ -10,3 +10,7 @@ NN_INPUTS = {
     'log_step': 5000,
     'lr': 0.001
 }
+
+# show extra plots
+SHOW_WEIGHTS = False
+SHOW_GRADS = False

@@ -76,7 +76,7 @@ def run(args):
         raman = data - photo
 
     if NN_load_variables:
-        raman, photo = split_with_NN(data, wavenumbers, NN_load_variables)
+        photo, raman = split_with_NN(data, wavenumbers, NN_load_variables)
 
     # saving data
     if photo is None:

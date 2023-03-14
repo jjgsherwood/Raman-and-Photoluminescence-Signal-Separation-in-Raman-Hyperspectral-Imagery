@@ -7,13 +7,12 @@ from torch.distributions import Normal
 import numpy as np
 import math
 
+from utils.config import *
+
 import matplotlib.pyplot as plt
 
 plt.rcParams['figure.figsize'] = (20.0, 10.0)
 plt.rcParams['figure.dpi'] = 100
-
-SHOW_WEIGHTS = False
-SHOW_GRADS = False
 
 def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=torch.device('cuda')):
     model.train()

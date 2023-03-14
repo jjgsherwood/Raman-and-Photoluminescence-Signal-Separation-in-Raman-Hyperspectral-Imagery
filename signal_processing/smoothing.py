@@ -12,7 +12,7 @@ from signal_processing import error
 # plt.rcParams['figure.dpi'] = 500
 
 class RemoveNoiseFFTPCA():
-    def __init__(self, algorithm='LPF_PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", gradient_width=3, spike_padding=5, max_spike_width=150, Print=False):
+    def __init__(self, algorithm='PCA', percentage_noise=0.01, wavenumbers=None, min_FWHM=2, error_function="MAPE", gradient_width=3, spike_padding=5, max_spike_width=150, Print=False):
         """
         Method to remove noise from raw data or split data.
 
@@ -51,7 +51,7 @@ class RemoveNoiseFFTPCA():
         if percentage_noise is None:
             if wavenumbers is None:
                 raise ValueError("Either the percentage_noise must be specified or the wavenumbers and min_FWHM must be specified!")
-            self.k = int(2.674 * (wavenumbers[-1] - wavenumbers[0]) / (np.pi*min_FWHM)) 
+            self.k = int(2.674 * (wavenumbers[-1] - wavenumbers[0]) / (np.pi*min_FWHM))
 
         if algorithm not in {'PCA', 'LPF', 'LPF_PCA', 'PCA_LPF'}:
             raise ValueError("algorithm must be set to: PCA, LPF, LPF_PCA, PCA_LPF.")

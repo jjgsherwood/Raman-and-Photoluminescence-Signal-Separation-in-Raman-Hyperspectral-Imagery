@@ -236,11 +236,11 @@ class split():
         # plt.plot(new_photo[n], linewidth=0.1)
         while ((old:=error.MAPE(photo, new_photo)) > self.convergence and i < 30) or i < 2:
             # forget photo approximation
-            if i == 0:
-                photo = new_photo
-            # learning rate schedular
-            if i >= 10:
-                alpha *= 0.9
+            # if i == 0:
+            #     photo = new_photo
+            # # learning rate schedular
+            # if i >= 10:
+            #     alpha *= 0.9
             print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
             new_photo[new_photo <= 0] = 1e-8
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
