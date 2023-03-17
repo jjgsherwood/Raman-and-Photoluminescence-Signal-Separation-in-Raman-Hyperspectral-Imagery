@@ -12,6 +12,8 @@ from utils import module, config
 from utils import train_utils as train
 from utils import dataset_utils as dataset
 
+import matplotlib.pyplot as plt
+
 class SupervisedSplitting():
     def __init__(self, **kwargs):
         self.kwargs = kwargs
@@ -28,6 +30,12 @@ class SupervisedSplitting():
         parameters = filter(lambda x: x.requires_grad, self.model.parameters())
         self.optimizer = optim.Adam(parameters, lr=self.kwargs['lr'])
         self.train_loader, self.test_loader = dataset.load_splitdata(data, self.kwargs['batch_size'])
+        loss_lst = {"train_loss":[],
+                    "smoothness":[],
+                    "compared_grad":[],
+                    "% error":[],
+                    "MSE photo":[],
+                    "MSE raman":[]}
 
         for epoch in range(self.kwargs['epochs']):
             # old code should not do anything unless something weird goes wrong this gives some safety
@@ -53,12 +61,59 @@ class SupervisedSplitting():
             print('-'*50)
             print('Epoch {:3d}/{:3d}'.format(epoch, self.kwargs['epochs']))
             start_time = datetime.now()
-            train.train(self.model, self.optimizer, self.train_loader, self.kwargs['loss_func'], self.kwargs['acc_func'], self.kwargs['log_step'], self.device)
+            loss = train.train(self.model, self.optimizer, self.train_loader, self.kwargs['loss_func'], self.kwargs['acc_func'], self.kwargs['log_step'], self.device)
+            loss_lst["train_loss"] += loss["train_loss"]
+            loss_lst["smoothness"] += loss["smoothness"]
+            loss_lst["compared_grad"] += loss["compared_grad"]
+            loss_lst["% error"] += loss["% error"]
+            loss_lst["MSE photo"] += loss["MSE photo"]
+            loss_lst["MSE raman"] += loss["MSE raman"]
+
             end_time = datetime.now()
             time_diff = relativedelta(end_time, start_time)
             print('Elapsed time: {}h {}m {}s'.format(time_diff.hours, time_diff.minutes, time_diff.seconds))
             train.test(self.model, self.test_loader, self.kwargs['loss_func'], self.kwargs['acc_func'], self.kwargs['log_step'], self.device)
             torch.save(self.model, f"{saved_NN}//Conv_FFT_model_epoch{epoch}.pt")
+
+        plt.rcParams['figure.figsize'] = (50, 15)
+        plt.rcParams['figure.dpi'] = 250
+        plt.rcParams['lines.linewidth'] = 0.1
+
+        plt.title("train_loss")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["train_loss"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
+
+        plt.title("smoothness")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["smoothness"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
+
+        plt.title("compared_grad")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["compared_grad"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
+
+        plt.title("% error")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["% error"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
+
+        plt.title("MSE photo")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["MSE photo"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
+
+        plt.title("MSE raman")
+        plt.plot(range(len(loss_lst["train_loss"])), loss_lst["MSE raman"])
+        plt.xticks(ticks=np.linspace(0,len(loss_lst["train_loss"]),self.kwargs['epochs']) ,labels=range(self.kwargs['epochs']))
+        plt.xlim(0,len(loss_lst["train_loss"]))
+        plt.show()
         return self
 
     def predict(self, data, load_file):

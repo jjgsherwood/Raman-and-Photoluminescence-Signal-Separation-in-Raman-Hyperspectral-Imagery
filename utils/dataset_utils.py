@@ -110,8 +110,8 @@ class RawDataset(Dataset):
 
     def __getitem__(self, index):
         pixel = index % (self.data.size(1) * self.data.size(2))
-        index_x = pixel % self.data.size(1)
-        index_y = pixel // self.data.size(1)
+        index_x = pixel // self.data.size(2)
+        index_y = pixel % self.data.size(2)
         index_image = index // (self.data.size(1) * self.data.size(2))
         data = self.data[index_image, index_x, index_y, :]
 
