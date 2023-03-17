@@ -14,9 +14,29 @@ import matplotlib.pyplot as plt
 plt.rcParams['figure.figsize'] = (20.0, 10.0)
 plt.rcParams['figure.dpi'] = 100
 
+def MAPE(x, y):
+    return np.mean(np.abs(1 - y/x))
+
+def RMSPE(x, y):
+    return np.mean(np.sqrt(np.mean((1 - y/x)**2, 1)))
+
+def MSE(x,y):
+    return np.mean((x-y)**2)
+
+def MSGE(y):
+    return np.mean(np.diff(y, axis=-1)**2)
+
+def TMSGE(x, y):
+    return np.mean((np.diff(x, axis=-1) - np.diff(y, axis=-1))**2)
+
 def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=torch.device('cuda')):
     model.train()
-
+    loss_lst = {"train_loss":[],
+                "smoothness":[],
+                "compared_grad":[],
+                "% error":[],
+                "MSE photo":[],
+                "MSE raman":[]}
     for batch_idx, (x, *y) in enumerate(loader):
         optimizer.zero_grad()
 
@@ -26,6 +46,16 @@ def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=t
         loss = loss_func(y, y_, x)
 
         loss.backward()
+        raman, photo = y
+        raman = raman.numpy()
+        photo = photo.numpy()
+        new_raman, new_photo = y_[1].cpu().detach().numpy(), y_[0].cpu().detach().numpy()
+        loss_lst["train_loss"].append(loss.cpu().detach().numpy())
+        loss_lst["smoothness"].append(MSGE(new_photo))
+        loss_lst["compared_grad"].append(TMSGE(photo, new_photo))
+        loss_lst["% error"].append(MAPE(photo, new_photo))
+        loss_lst["MSE photo"].append(MSE(photo, new_photo))
+        loss_lst["MSE raman"].append(MSE(raman, new_raman))
 
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
 
@@ -62,6 +92,7 @@ def train(model, optimizer, loader, loss_func, acc_func, log_step=None, device=t
                     datetime.now().strftime('%Y-%m-%d %H:%M:%S'), batch_idx,
                     len(loader), acc_func(y, y_, x) / torch.mean(torch.sum(x, 1))
                 ), flush=True)
+    return loss_lst
 
 def test(model, loader, loss_func, acc_func, log_step, device=torch.device('cuda')):
     model.eval()
