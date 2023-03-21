@@ -4,6 +4,7 @@ from collections import defaultdict
 from scipy.fft import dct
 import scipy.signal as signal
 import scipy.interpolate as interpolate
+import copy
 
 import matplotlib.pyplot as plt
 
@@ -18,6 +19,15 @@ SUM_CORR = np.sum(gaus)
 
 def median(values):
     return sorted(values)[len(values)//2]
+
+
+def merge_defaultdicts(d,d1):
+    for k,v in d1.items():
+        if (k in d):
+            d[k].update(d1[k])
+        else:
+            d[k] = d1[k]
+    return d
 
 class remove_cosmicrays():
     def __init__(self,
@@ -56,19 +66,41 @@ class remove_cosmicrays():
         """
 
         self.n_times = n_times
-        self.min_FWHM = min_FWHM
+        self.min_FWHM = min_FWHM / (wavenumbers[-1] - wavenumbers[0]) * len(wavenumbers)
         self.k = int(2.674*(wavenumbers[-1] - wavenumbers[0]) / (np.pi*FWHM_smoothing))
         self.region_padding = region_padding
         self.occ_per = occurrence_percentage
         self.extend = region_padding
         self.interpolate_degree = interpolate_degree
+        self.max_spike_diff = 2 # due to measurements errors spike can shift a few indices this determines that number
 
     def __call__(self, img):
         local_points = self.find_cosmic_ray_noise_spectral(img)
         neighbourhood_points = self.find_cosmic_ray_noise_neighbourhood(img)
-        local_points.update(neighbourhood_points)
+        local_points = merge_defaultdicts(local_points, neighbourhood_points)
         local_points = self.wavenumber_check(np.prod(img.shape[:-1]), local_points)
+        local_points = self.join_spikes_to_close(local_points)
         return self.remove_cosmicrays(img, local_points)
+
+    def join_spikes_to_close(self, cosmic_ray_points):
+        """
+        Spike that are to close should be removed together and not seperatly.
+        """
+        for (x,y), spikes_info in cosmic_ray_points.items():
+            spikes = np.array(list(spikes_info.keys()))
+            if len(spikes) < 2:
+                continue
+            # keep joining spikes till they can no longer be joined
+            while True:
+                for i, spike_diff in enumerate(spikes[1:] - spikes[:-1]):
+                    if spike_diff < 3 * self.region_padding:
+                         spikes_info[spikes[i]] = (spikes_info[spikes[i]][0], spikes_info[spikes[i+1]][1]) #join spikes take boundery left from left spike and vise versa
+                         cosmic_ray_points[(x,y)].pop(spikes[i+1])
+                         spikes = np.array(list(spikes_info.keys()))
+                         break
+                else:
+                    break
+        return cosmic_ray_points
 
     def remove_cosmicrays(self, img, cosmic_ray_points):
         """
@@ -111,8 +143,24 @@ class remove_cosmicrays():
         """
         n_pixel_threshold = int(img_size * self.occ_per)
 
+        wavenumber, count = np.unique([y for x in cosmic_ray_points.values() for y, _ in x.items()], return_counts=True)
+        duplicate_count = copy.copy(count)
+        for i, w in enumerate(wavenumber):
+            region_sum = 0
+            for j, w1 in enumerate(wavenumber[i::-1]):
+                if w - w1 <= self.max_spike_diff:
+                    region_sum += duplicate_count[i-j]
+                else:
+                    break
+            for j, w1 in enumerate(wavenumber[i+1:]):
+                if w1 - w <= self.max_spike_diff:
+                    region_sum += duplicate_count[i+j+1]
+                else:
+                    break
+            count[i] = region_sum
+
         wavenumber_lst = []
-        for wavenumber, count in zip(*np.unique([y for x in cosmic_ray_points.values() for y, _ in x.items()], return_counts=True)):
+        for wavenumber, count in zip(*(wavenumber, count)):
             if count > n_pixel_threshold:
                 wavenumber_lst.append(wavenumber)
 
@@ -122,7 +170,6 @@ class remove_cosmicrays():
                     cosmic_ray_points[(x,y)].pop(wavenumber)
                 except KeyError:
                     pass
-
         return cosmic_ray_points
 
     def find_cosmic_ray_noise_spectral(self, img):
@@ -170,7 +217,7 @@ class remove_cosmicrays():
                 l,r = max(0,region[0]-self.region_padding),min(img.shape[-1],region[-1]+self.region_padding)
                 values = img[x,y,l:r]
 
-                peaks, properties = signal.find_peaks(values, prominence=self.n_times/2*(median(values)-np.min(values)), width=(None, self.min_FWHM))
+                peaks, properties = signal.find_peaks(values, prominence=self.n_times/2*(median(values)-np.min(values)), width=(None, self.min_FWHM), rel_height=0.6) #the prominence is not the height of the guassian so a bit of composition.
                 for peak, *properties in zip(peaks,*properties.values()):
                     left = properties[name_to_index['left_bases']] + l
                     right = properties[name_to_index['right_bases']] + l
