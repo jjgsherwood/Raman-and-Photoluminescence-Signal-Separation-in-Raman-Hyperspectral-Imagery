@@ -217,7 +217,7 @@ class remove_cosmicrays():
                 l,r = max(0,region[0]-self.region_padding),min(img.shape[-1],region[-1]+self.region_padding)
                 values = img[x,y,l:r]
 
-                peaks, properties = signal.find_peaks(values, prominence=self.n_times/2*(median(values)-np.min(values)), width=(None, self.min_FWHM), rel_height=0.6) #the prominence is not the height of the guassian so a bit of composition.
+                peaks, properties = signal.find_peaks(values, prominence=self.n_times/2*(median(values)-np.min(values)), width=(None, self.min_FWHM), rel_height=0.5) #the prominence is not the height of the guassian so a bit of composition.
                 for peak, *properties in zip(peaks,*properties.values()):
                     left = properties[name_to_index['left_bases']] + l
                     right = properties[name_to_index['right_bases']] + l
