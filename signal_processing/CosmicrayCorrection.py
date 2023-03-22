@@ -87,14 +87,14 @@ class remove_cosmicrays():
         Spike that are to close should be removed together and not seperatly.
         """
         for (x,y), spikes_info in cosmic_ray_points.items():
-            spikes = np.array(list(spikes_info.keys()))
+            spikes = np.array(sorted(list(spikes_info.keys())))
             if len(spikes) < 2:
                 continue
             # keep joining spikes till they can no longer be joined
             while True:
                 for i, spike_diff in enumerate(spikes[1:] - spikes[:-1]):
                     if spike_diff < 3 * self.region_padding:
-                         spikes_info[spikes[i]] = (spikes_info[spikes[i]][0], spikes_info[spikes[i+1]][1]) #join spikes take boundery left from left spike and vise versa
+                         spikes_info[spikes[i]] = (min(spikes_info[spikes[i]][0], spikes_info[spikes[i+1]][0]), max(spikes_info[spikes[i]][1], spikes_info[spikes[i+1]][1])) #join spikes take boundery most left and most right
                          cosmic_ray_points[(x,y)].pop(spikes[i+1])
                          spikes = np.array(list(spikes_info.keys()))
                          break
