@@ -1008,9 +1008,10 @@ This creates a more stable noise removal algorithm were the amount of noise remo
         return pref
 
     def __get_files_from_folder(self, dir_path):
-        npy_files = glob.glob(dir_path + '/[!Wave|metadata]*.npy')
-        wave_files = glob.glob(dir_path + '/*Wavenumbers.npy')
-        txt_files = glob.glob(dir_path + '/[!metadata]*.txt')
+        npy_files = [f for f in glob.glob(dir_path + "/*.npy") if "wavenumber" not in f.lower()]
+        wave_files = [f for f in glob.glob(dir_path + "/*.npy") if "wavenumber" in f.lower()]
+        txt_files = [f for f in glob.glob(dir_path + "/*.txt") if "metadata" not in f.lower()]
+
         # check if there are numpy files in the folder and a wavenumber file
         if npy_files and wave_files:
             if len(wave_files) == 1:
