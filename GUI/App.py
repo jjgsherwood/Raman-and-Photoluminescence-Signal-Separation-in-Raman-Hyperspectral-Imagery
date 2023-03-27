@@ -625,7 +625,7 @@ This creates a more stable noise removal algorithm were the amount of noise remo
 
         self.max_FWHM_sb = QDoubleSpinBox()
         self.max_FWHM_sb.setMinimum(0)
-        self.max_FWHM_sb.setValue(5.0)
+        self.max_FWHM_sb.setValue(7.0)
         self.max_FWHM_sb.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.max_FWHM_sb, QStyle.SP_MessageBoxInformation, icontext="This value sets the maximum FWHM for a cosmic ray spike.\nThe unity is in wavenumbers.\n\nSee the thesis for a full explanation.")
         subgrid.addLayout(spinboxlayout, 3, 1)

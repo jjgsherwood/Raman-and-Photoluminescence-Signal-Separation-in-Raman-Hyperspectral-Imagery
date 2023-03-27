@@ -11,3 +11,6 @@ from scipy.fft import dct
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from signal_processing import *
 from GUI.Process import load_files
+
+from IPython.display import display, HTML
+display(HTML("<style>.container { width:98% !important; }</style>"))
