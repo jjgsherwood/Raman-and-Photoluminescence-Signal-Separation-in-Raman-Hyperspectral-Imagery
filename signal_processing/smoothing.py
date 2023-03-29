@@ -130,12 +130,13 @@ class RemoveNoiseFFTPCA():
         pca.fit(x_new)
 
         components_ = copy.copy(pca.components_)
+        pca_space = pca.transform(x_new)
         middle = (left + right) // 2
         # pca.components_ = components_[:middle]
         # x_pca = pca.inverse_transform(pca.transform(x_new))
         while middle != left and middle != right:
             pca.components_ = components_[:middle]
-            x_pca = pca.inverse_transform(pca.transform(x_new))
+            x_pca = pca.inverse_transform(pca_space[:,:middle])
 
             if self.error(x, x_pca) < percentage_noise:
                 right = middle
