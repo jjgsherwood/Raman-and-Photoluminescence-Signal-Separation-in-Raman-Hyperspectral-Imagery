@@ -445,6 +445,8 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
         self.noise_error_algorithm = QComboBox()
         self.noise_error_algorithm.addItem('MAPE')
         self.noise_error_algorithm.addItem('RMSPE')
+        self.noise_error_algorithm.addItem('TMSGE')
+        self.noise_error_algorithm.addItem('MSE')
         self.noise_error_algorithm.setMinimumWidth(width)
         comboBoxlayout = Widget.AddIconToWidget(self.noise_error_algorithm, QStyle.SP_MessageBoxInformation, icontext="This determines how the noise is calculated default is MAPE (mean absolute percentage error).\nThe other option is RMSPE (root mean squared percentage error).")
         text = QLabel("Calculating noise percentage algorithm")
