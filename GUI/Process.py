@@ -22,6 +22,9 @@ def run(args):
     photo_wavenumbers = None
 
     data, wavenumbers = remove_duplicate_wavenumbers(data, wavenumbers)
+    wavenumbers = np.array(wavenumbers)
+    data = np.array(data)
+
 
     # check if selected parameters are possible
     try:
