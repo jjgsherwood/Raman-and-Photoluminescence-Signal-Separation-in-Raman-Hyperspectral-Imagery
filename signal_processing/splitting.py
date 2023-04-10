@@ -215,7 +215,7 @@ class split():
             weights += mean_error
             weights /= np.mean(weights)
             # poly_max[to_high] *= 0.975
-            poly_max[to_high] += (img-photo)[to_high]
+            poly_max[to_high] += (img-photo)[to_high] * 0.5
             poly_max[poly_max <= 0] = 1e-3
             i += 1
             photo[photo < 1] = 1
@@ -224,7 +224,7 @@ class split():
             # plt.plot(photo[n], linewidth=0.1)
             # plt.show()
         # plt.show()
-        print("inner iterations", i, flush=True)
+        # print("inner iterations", i, flush=True)
         return photo
 
     def __call__(self, img, new_photo):

@@ -443,9 +443,9 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
         grid.addLayout(comboBoxlayout, 0, 1)
 
         self.noise_error_algorithm = QComboBox()
+        self.noise_error_algorithm.addItem('TMSGE')
         self.noise_error_algorithm.addItem('MAPE')
         self.noise_error_algorithm.addItem('RMSPE')
-        self.noise_error_algorithm.addItem('TMSGE')
         self.noise_error_algorithm.addItem('MSE')
         self.noise_error_algorithm.setMinimumWidth(width)
         comboBoxlayout = Widget.AddIconToWidget(self.noise_error_algorithm, QStyle.SP_MessageBoxInformation, icontext="This determines how the noise is calculated default is MAPE (mean absolute percentage error).\nThe other option is RMSPE (root mean squared percentage error).")
@@ -466,7 +466,7 @@ PCA_LPF: First uses PCA and than LPF. Can only be used (semi-)automated.
 
         self.automated_FWHM = QDoubleSpinBox()
         self.automated_FWHM.setRange(0.0,30.0)
-        self.automated_FWHM.setValue(5.0)
+        self.automated_FWHM.setValue(9.0)
         self.automated_FWHM.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.automated_FWHM, QStyle.SP_MessageBoxInformation,icontext=
 """This FWHM is used to calculate the cutoff point for the LPF (low pass band filter) after DCT (discreet cosine transform) is applied.

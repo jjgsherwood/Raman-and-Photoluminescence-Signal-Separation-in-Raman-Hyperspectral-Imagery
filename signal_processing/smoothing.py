@@ -144,7 +144,6 @@ class RemoveNoiseFFTPCA():
             else:
                 left = middle
             middle = (left + right) // 2
-        print(middle, std_k)
         return x_pca
 
     def __call__(self, x):
