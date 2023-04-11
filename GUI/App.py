@@ -316,7 +316,7 @@ For more info, see Thesis.""")
 
         self.segment_width = QSpinBox()
         self.segment_width.setRange(50,1000)
-        self.segment_width.setValue(400)
+        self.segment_width.setValue(450)
         self.segment_width.setSingleStep(25)
         self.segment_width.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.segment_width, QStyle.SP_MessageBoxInformation,icontext="""This determines the segment width for the gradient based segment fit algorithm.\nThis is given in wavenumbers.""")

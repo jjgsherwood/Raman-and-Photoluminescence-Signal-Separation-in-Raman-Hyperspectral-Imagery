@@ -57,7 +57,8 @@ class preliminary_split():
             mean_error = np.mean(to_high, 0)
             weights += mean_error
             weights /= np.mean(weights)
-            target[to_high] *= 0.975
+            target[to_high] += (img-photo)[to_high] * 0.5
+            target[target <= 0] = 1e-3
             photo[photo < 1] = 1
         return photo
 
@@ -227,7 +228,10 @@ class split():
         # print("inner iterations", i, flush=True)
         return photo
 
-    def __call__(self, img, new_photo):
+    def __call__(self, img, new_photo=None):
+        if new_photo is None:
+            new_photo = img
+            
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
         alpha = 1
@@ -241,7 +245,7 @@ class split():
             # # learning rate schedular
             # if i >= 10:
             #     alpha *= 0.9
-            print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
+            # print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
             new_photo[new_photo <= 0] = 1e-8
             new_photo, photo = (1-alpha)*photo + alpha * self.__iteration(img, new_photo), new_photo
             photo[photo < 1] = 1
@@ -251,6 +255,6 @@ class split():
             # plt.show()
             i += 1
         # plt.show()
-        print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
-        print("outer iterations", i, flush=True)
+        # print(f"iteration: {i} gives an outer error {old} with a learning rate of {alpha}", flush=True)
+        # print("outer iterations", i, flush=True)
         return photo
