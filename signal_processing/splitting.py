@@ -3,9 +3,9 @@ import copy
 
 from signal_processing import error, LSQ_approximations as LSQ
 
-# import matplotlib.pyplot as plt
-# plt.rcParams['figure.figsize'] = (20.0, 10.0)
-# plt.rcParams['figure.dpi'] = 500
+import matplotlib.pyplot as plt
+plt.rcParams['figure.figsize'] = (20.0, 10.0)
+plt.rcParams['figure.dpi'] = 500
 
 def Bezier_curve(p0,p1,p2):
     x0, x1, x2 = p0[0], p1[0], p2[0]
@@ -101,6 +101,7 @@ class split():
         self.LS = LSQ.photo_approximation(order=2, size=self.width, log=False)
         self.convergence = convergence
         self.algorithm = algorithm
+        self.wavenumbers = wavenumbers
 
     def __grad(self, photo_appr):
         grad =  np.pad((photo_appr[:,2:] - photo_appr[:,:-2]) / 2, ((0,0),(1,1)), 'edge')
@@ -176,28 +177,34 @@ class split():
         grad = self.__grad(photo)
         half_width = int(self.width//2)
         poly_max = np.zeros(img.shape)
-
-        # n = 482
-        # plt.plot(img[n])
+        #
+        # n = 0
+        # plt.plot(self.wavenumbers, img[n])
         # approximate left bounderie
         for right in range(self.stepsize, self.width, self.stepsize):
             left = max(0, right-half_width)
             new_segment = self.__approximate_gradient_bounderies(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
-            # plt.plot(range(left, right), new_segment[n])
+            # plt.plot(self.wavenumbers[left: right], new_segment[n])
         # approximate middle section
         for left in range(0, self.size-self.width, self.stepsize):
             right = left + self.width
             new_segment = self.__fit_gradient_line_segment(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
-            # plt.plot(range(left, right), new_segment[n])
+            # plt.plot(self.wavenumbers[left: right], new_segment[n])
 
         # approximate right bounderie
         for left in range(self.size-self.width, self.size-self.stepsize, self.stepsize):
             right = min(self.size, left+half_width)
             new_segment = self.__approximate_gradient_bounderies(img, grad, left, right)
             poly_max[:,left:right] = np.maximum(poly_max[:,left:right], new_segment)
-            # plt.plot(range(left, right), new_segment[n])
+            # plt.plot(self.wavenumbers[left: right], new_segment[n])
+
+        # plt.show()
+
+        # plt.plot(self.wavenumbers, img[n])
+        # plt.plot(self.wavenumbers, photo[n])
+        # plt.plot(self.wavenumbers, poly_max[n])
 
         # plt.show()
 
@@ -226,12 +233,14 @@ class split():
             # plt.show()
         # plt.show()
         # print("inner iterations", i, flush=True)
+        # plt.plot(self.wavenumbers, photo[n])
+        # plt.show()
         return photo
 
     def __call__(self, img, new_photo=None):
         if new_photo is None:
             new_photo = img
-            
+
         new_photo, photo = self.__iteration(img, new_photo), -1
         i = 0
         alpha = 1
