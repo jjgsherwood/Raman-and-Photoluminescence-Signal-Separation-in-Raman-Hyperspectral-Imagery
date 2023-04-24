@@ -1,13 +1,16 @@
 import numpy as np
 
 def MAPE(x, y):
-    return np.mean(np.abs(1 - y/x))
+    return np.mean(np.abs(1 - y/np.maximum(x, 1)))
 
 def RMSPE(x, y):
     return np.mean(np.sqrt(np.mean((1 - y/x)**2, 1)))
 
 def MSE(x,y):
     return np.mean((x-y)**2)
+
+def RMSE(x,y):
+    return np.sqrt(np.mean((x-y)**2))
 
 def MSGE(x):
     return np.mean((x[1:] - x[:-1])**2)
@@ -19,6 +22,7 @@ STRING_TO_FUNCTION = {
     "MAPE": MAPE,
     "RMSPE": RMSPE,
     "MSE": MSE,
+    "RMSE": RMSE,
     "MSGE": MSGE,
     "TMSGE": TMSGE
 }
