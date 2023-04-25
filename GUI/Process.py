@@ -90,7 +90,7 @@ def run(args):
         else:
             name = "raw_"
         save_data(data, wavenumbers, shapes, filenames, save_variables, text, name=name)
-    else:
+    elif 'fast_loading' not in NN_train_variables:
         filenames_raman = [os.path.splitext(f)[0]+"_raman" for f in filenames]
         filenames_photo = [os.path.splitext(f)[0]+"_photoluminescence" for f in filenames]
         save_data(raman, wavenumbers, shapes, filenames_raman, save_variables, text, name="raman ")
