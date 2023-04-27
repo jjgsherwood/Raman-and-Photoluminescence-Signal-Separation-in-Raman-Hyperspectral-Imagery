@@ -3,7 +3,7 @@ VALIDATION_PER = 0.1
 
 # determine after how many epochs the training phases switch.
 PRETRAINING_PHASE_1 = 5
-PRETRAINING_PHASE_2 = 8
+PRETRAINING_PHASE_2 = 10
 
 NN_INPUTS = {
     'cuda': True,

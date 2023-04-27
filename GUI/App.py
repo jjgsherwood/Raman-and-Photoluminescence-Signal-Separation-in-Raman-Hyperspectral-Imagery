@@ -185,7 +185,7 @@ The raw data can be either not smoothed or not smoothed.""")
         width = 100
         self.epochs = QSpinBox()
         self.epochs.setRange(1,1000)
-        self.epochs.setValue(50)
+        self.epochs.setValue(30)
         self.epochs.setSingleStep(5)
         self.epochs.setMinimumWidth(width)
         spinboxlayout = Widget.AddIconToWidget(self.epochs, QStyle.SP_MessageBoxInformation,icontext=
