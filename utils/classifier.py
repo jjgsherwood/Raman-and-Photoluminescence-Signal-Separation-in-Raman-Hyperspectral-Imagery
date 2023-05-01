@@ -27,7 +27,7 @@ class SupervisedSplitting():
         print(f"device: {self.device}")
 
     def fit(self, data, saved_NN, load_file=None):
-        self.model = module.Conv_FFT().to(self.device)
+        self.model = module.Conv_FFT(num_input_channels=2, groups=2).to(self.device)
         parameters = filter(lambda x: x.requires_grad, self.model.parameters())
         self.optimizer = optim.Adam(parameters, lr=self.kwargs['lr'])
         self.train_loader, self.test_loader = dataset.load_splitdata(data, self.kwargs['batch_size'])

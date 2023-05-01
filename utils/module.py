@@ -105,7 +105,18 @@ class Conv_FFT(nn.Module):
             self.smooth = self.smooth_phase2
             self.raman = self.raman_phase3
 
+    # def forward(self, x):
+    #     # without RFFt
+    #     # print(x.shape)
+    #     x0 = x.reshape((x.shape[0], 1, x.shape[1]))
+    #     # print(x.shape)
+    #     x0 = self.net(x0)
+    #     x1, x2 = x0[:,0], x0[:,1]
+    #     x3 = torch.stack((x, x1, x2),1)
+    #     return self.smooth(x3), self.raman(x3), x1, x2
+
     def forward(self, x):
+        # With RFFT
         n_wavenumbers = x.shape[-1]
         # rfft to go from wavenumbers to frequencies
         x0 = torch.fft.rfft(x, dim=1, norm='backward')
