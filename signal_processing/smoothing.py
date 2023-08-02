@@ -132,7 +132,7 @@ class RemoveNoiseFFTPCA():
         components_ = copy.copy(pca.components_)
         pca_space = pca.transform(x_new)
         middle = (left + right) // 2
-        std_k = int((left+right)*0.05)
+        # std_k = int((left+right)*0.05)
         # pca.components_ = components_[:std_k]
         # x_pca = pca.inverse_transform(pca_space[:,:std_k])
         while middle != left and middle != right:
